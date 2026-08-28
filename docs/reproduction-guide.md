@@ -2,6 +2,35 @@
 
 This guide provides step-by-step instructions for reproducing the Cloud Triage Agent project in a fresh environment.
 
+## Fastest path: local evaluation (no AWS required)
+
+To reproduce the accuracy numbers in `docs/changelog.md` without deploying
+anything:
+
+```bash
+git clone https://github.com/s-aduk/cloud-triage-agent.git
+cd cloud-triage-agent
+npm run eval:local
+```
+
+This installs `services/triage-api`'s dependencies, compiles it with the real
+`tsc` build, and runs both handlers in-process against
+`data/evaluation-cases.json`. Expect:
+
+```
+Baseline: 5/10 (50.00%)
+Agent:    7/10 (70.00%)
+Delta:    2 cases (20.00%)
+```
+
+Requires only Node.js 18+ and npm. Runtime: well under a minute; no AWS
+credentials, no cost. Full results are written to `output/baseline-results.json`,
+`output/agent-results.json`, and `output/score.json`.
+
+The steps below cover the full AWS deployment (SAM/Lambda/API Gateway) plus
+the frontend, for anyone who wants to exercise the deployed API or the UI
+rather than just the evaluation.
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:

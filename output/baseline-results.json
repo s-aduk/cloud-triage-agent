@@ -1,0 +1,294 @@
+[
+  {
+    "caseId": "case-001",
+    "input": {
+      "id": "case-001",
+      "title": "EC2 CPU Spike",
+      "description": "EC2 instance i-0a1b2c3d4e5f6g7h8 showing 95% CPU utilization for 15 minutes. CloudWatch alarm triggered. Application response times increased from 200ms to 2s. No recent deployments.",
+      "expected": {
+        "incidentType": "performance",
+        "severity": "high",
+        "probableCause": "sudden traffic increase or infinite loop in application code",
+        "evidence": [
+          "CloudWatch CPU alarm",
+          "95% utilization for 15min",
+          "response time increase 5x"
+        ],
+        "nextAction": "scale EC2 instance or investigate application code for infinite loops",
+        "confidence": 0.85
+      }
+    },
+    "output": {
+      "incidentType": "performance",
+      "severity": "high",
+      "probableCause": "high CPU utilization",
+      "evidence": [
+        "CPU utilization mentioned in description"
+      ],
+      "nextAction": "investigate CPU usage and consider scaling",
+      "confidence": 0.7
+    }
+  },
+  {
+    "caseId": "case-002",
+    "input": {
+      "id": "case-002",
+      "title": "S3 Bucket Public Access",
+      "description": "AWS Config rule flagged S3 bucket 'company-backups-2024' as publicly accessible. Bucket contains customer PII data. No IAM policy changes in last 24 hours.",
+      "expected": {
+        "incidentType": "security",
+        "severity": "critical",
+        "probableCause": "misconfigured S3 bucket policy or ACL allowing public read access",
+        "evidence": [
+          "AWS Config public access flag",
+          "bucket contains PII",
+          "no recent IAM changes"
+        ],
+        "nextAction": "immediately block public access, audit bucket contents, enable S3 block public settings",
+        "confidence": 0.95
+      }
+    },
+    "output": {
+      "incidentType": "security",
+      "severity": "critical",
+      "probableCause": "S3 bucket publicly accessible",
+      "evidence": [
+        "S3 and public access mentioned"
+      ],
+      "nextAction": "block public access immediately",
+      "confidence": 0.9
+    }
+  },
+  {
+    "caseId": "case-003",
+    "input": {
+      "id": "case-003",
+      "title": "RDS Connection Exhaustion",
+      "description": "RDS PostgreSQL instance db-primary showing 98% connection usage. Application errors: 'too many connections'. Read replica lagging by 45 seconds.",
+      "expected": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "connection pool misconfiguration or application leak",
+        "evidence": [
+          "98% DB connections used",
+          "application connection errors",
+          "read replica lag"
+        ],
+        "nextAction": "increase max_connections, investigate connection pooling, check for connection leaks",
+        "confidence": 0.9
+      }
+    },
+    "output": {
+      "incidentType": "unknown",
+      "severity": "low",
+      "probableCause": "insufficient information",
+      "evidence": [],
+      "nextAction": "gather more information",
+      "confidence": 0.2
+    }
+  },
+  {
+    "caseId": "case-004",
+    "input": {
+      "id": "case-004",
+      "title": "Lambda Throttling",
+      "description": "Lambda function process-orders showing 429 errors. Duration increased from 1s to 8s. Concurrent executions at limit of 1000.",
+      "expected": {
+        "incidentType": "throttling",
+        "severity": "medium",
+        "probableCause": "sudden increase in order processing volume exceeding concurrency limits",
+        "evidence": [
+          "429 errors",
+          "duration 8x increase",
+          "at concurrency limit"
+        ],
+        "nextAction": "increase reserved concurrency, investigate batch size optimization, consider SQS buffering",
+        "confidence": 0.8
+      }
+    },
+    "output": {
+      "incidentType": "unknown",
+      "severity": "low",
+      "probableCause": "insufficient information",
+      "evidence": [],
+      "nextAction": "gather more information",
+      "confidence": 0.2
+    }
+  },
+  {
+    "caseId": "case-005",
+    "input": {
+      "id": "case-005",
+      "title": "API Gateway Latency Spike",
+      "description": "API Gateway showing 504 errors and latency p95 increased from 300ms to 12s. Integration Lambda timing out after 10s.",
+      "expected": {
+        "incidentType": "timeout",
+        "severity": "high",
+        "probableCause": "backend database slow query or external API delay",
+        "evidence": [
+          "504 errors",
+          "latency 40x increase",
+          "Lambda timeout at 10s"
+        ],
+        "nextAction": "increase Lambda timeout, optimize database queries, add caching layer",
+        "confidence": 0.75
+      }
+    },
+    "output": {
+      "incidentType": "timeout",
+      "severity": "high",
+      "probableCause": "API Gateway timeout or latency issue",
+      "evidence": [
+        "API Gateway and timeout/latency mentioned"
+      ],
+      "nextAction": "increase timeout and investigate backend",
+      "confidence": 0.7
+    }
+  },
+  {
+    "caseId": "case-006",
+    "input": {
+      "id": "case-006",
+      "title": "Mixed Signals - Deploy and Error",
+      "description": "Deploy finished 10 minutes ago to ECS service web-frontend. Error rate increased from 0.1% to 5%. CPU normal at 40%. Memory usage increased from 60% to 85%.",
+      "expected": {
+        "incidentType": "deployment-issue",
+        "severity": "medium",
+        "probableCause": "new version has memory leak or inefficient code path",
+        "evidence": [
+          "recent deploy",
+          "error rate 50x increase",
+          "memory usage up 40%"
+        ],
+        "nextAction": "roll back deployment, investigate memory usage in new code, check logs for exceptions",
+        "confidence": 0.7
+      }
+    },
+    "output": {
+      "incidentType": "performance",
+      "severity": "high",
+      "probableCause": "high CPU utilization",
+      "evidence": [
+        "CPU utilization mentioned in description"
+      ],
+      "nextAction": "investigate CPU usage and consider scaling",
+      "confidence": 0.7
+    }
+  },
+  {
+    "caseId": "case-007",
+    "input": {
+      "id": "case-007",
+      "title": "Data Pipeline Failure",
+      "description": "Glue job etl-nightly failed with OutOfMemoryError. Processing 2TB of S3 data. Job history shows gradually increasing duration over past 3 days.",
+      "expected": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "data volume growth exceeding Glue worker memory capacity",
+        "evidence": [
+          "OutOfMemoryError in Glue logs",
+          "2TB data processing",
+          "duration trend increasing"
+        ],
+        "nextAction": "increase Glue worker type, implement data partitioning, add snapshot isolation",
+        "confidence": 0.85
+      }
+    },
+    "output": {
+      "incidentType": "unknown",
+      "severity": "low",
+      "probableCause": "insufficient information",
+      "evidence": [],
+      "nextAction": "gather more information",
+      "confidence": 0.2
+    }
+  },
+  {
+    "caseId": "case-008",
+    "input": {
+      "id": "case-008",
+      "title": "Network Connectivity Issue",
+      "description": "VPC flow shows REJECT traffic from app-subnet to db-subnet on port 5432. Security group unchanged. Applications losing DB connectivity intermittently.",
+      "expected": {
+        "incidentType": "network",
+        "severity": "high",
+        "probableCause": "network ACL or security group rule incorrectly blocking database traffic",
+        "evidence": [
+          "VPC flow REJECT on port 5432",
+          "intermittent DB connectivity",
+          "security group unchanged"
+        ],
+        "nextAction": "check network ACLs, verify security group egress rules, test connectivity with nc command",
+        "confidence": 0.8
+      }
+    },
+    "output": {
+      "incidentType": "unknown",
+      "severity": "low",
+      "probableCause": "insufficient information",
+      "evidence": [],
+      "nextAction": "gather more information",
+      "confidence": 0.2
+    }
+  },
+  {
+    "caseId": "case-009",
+    "input": {
+      "id": "case-009",
+      "title": "Certificate Expiry",
+      "description": "Load balancer SSL certificate for api.example.com expired 2 hours ago. Clients getting SSL handshake failures. Certificate not rotated via ACM.",
+      "expected": {
+        "incidentType": "certificate",
+        "severity": "critical",
+        "probableCause": "expired SSL/TLS certificate not renewed automatically",
+        "evidence": [
+          "SSL certificate expired 2hrs ago",
+          "SSL handshake failures",
+          "no ACM auto-renewal"
+        ],
+        "nextAction": "renew certificate in ACM, verify load balancer configuration, set up monitoring for expiry",
+        "confidence": 0.98
+      }
+    },
+    "output": {
+      "incidentType": "certificate",
+      "severity": "critical",
+      "probableCause": "SSL/TLS certificate issue",
+      "evidence": [
+        "certificate or SSL mentioned"
+      ],
+      "nextAction": "check certificate validity and renew if needed",
+      "confidence": 0.85
+    }
+  },
+  {
+    "caseId": "case-010",
+    "input": {
+      "id": "case-010",
+      "title": "Cost Anomaly",
+      "description": "AWS Cost Explorer shows Lambda costs increased 300% day-over-day. No traffic increase observed. Same number of invocations but longer duration.",
+      "expected": {
+        "incidentType": "cost-anomaly",
+        "severity": "medium",
+        "probableCause": "infinite loop or inefficient processing in Lambda function increasing duration",
+        "evidence": [
+          "300% cost increase",
+          "same invocation count",
+          "longer duration per invocation"
+        ],
+        "nextAction": "identify high-cost Lambda functions, profile for performance issues, check for infinite loops",
+        "confidence": 0.7
+      }
+    },
+    "output": {
+      "incidentType": "cost-anomaly",
+      "severity": "medium",
+      "probableCause": "unexpected cost increase",
+      "evidence": [
+        "cost or billing mentioned"
+      ],
+      "nextAction": "review AWS Cost Explorer for anomalies",
+      "confidence": 0.6
+    }
+  }
+]
