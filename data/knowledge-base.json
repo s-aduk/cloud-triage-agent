@@ -69,7 +69,7 @@
       "symptoms": ["VPC REJECT logs", "intermittent service connectivity", "timeout errors"],
       "common_causes": ["network ACL blocking traffic", "security group misconfiguration", "route table issues", "MTU mismatch"],
       "investigation_steps": ["check VPC flow logs", "review network ACLs and security groups", "verify route tables", "test connectivity with network tools"],
-      "resolution_actions": "fix network ACL rules", "correct security group configurations", "update route tables as needed", "investigate MTU/path MTU discovery issues"],
+      "resolution_actions": ["fix network ACL rules", "correct security group configurations", "update route tables as needed", "investigate MTU/path MTU discovery issues"],
       "confidence_factors": ["specific port/protocol affected", "correlation with network changes", "consistency of rejection patterns"]
     },
     {
