@@ -32,7 +32,7 @@ const loadKnowledgeBase = (): KnowledgeBaseEntry[] => {
   try {
     // In a real Lambda, we might load from S3 or DynamoDB, but for simplicity we load from local file
     // Note: This is for demonstration. In production, we would use a proper data store.
-    const filePath = join(__dirname, '../../..', 'data', 'knowledge-base.json');
+    const filePath = join(__dirname, '../../../..', 'data', 'knowledge-base.json');
     const data = readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(data);
     return parsed.cloud_incidents || [];
@@ -252,4 +252,4 @@ export const agentTriage = async (input: TriageInput): Promise<TriageOutput> => 
   return result;
 };
 
-export { TriageInput, TriageOutput, loadKnowledgeBase };
+export { loadKnowledgeBase };
