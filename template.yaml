@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cloud Triage Agent - Helps engineering teams triage cloud incidents faster
+
+# SAM Parameters for configuration
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment
+
+# Global settings for all functions
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: info
+        POWERTOOLS_SERVICE_NAME: cloud-triage-agent
+        POWERTOOLS_METRICS_NAMESPACE: CloudTriageAgent
+
+Resources:
+  # Triage API Function
+  TriageApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub cloud-triage-agent-${Environment}
+      Description: Main API for cloud incident triage (baseline and agent workflows)
+      CodeUri: services/triage-api/
+      Handler: src/handlers/index.handler
+      Events:
+        TriageApi:
+          Type: Api
+          Properties:
+            Path: /triage
+            Method: post
+            RestApiId: !Ref TriageApi
+        BaselineApi:
+          Type: Api
+          Properties:
+            Path: /baseline
+            Method: post
+            RestApiId: !Ref TriageApi
+        AgentApi:
+          Type: Api
+          Properties:
+            Path: /agent
+            Method: post
+            RestApiId: !Ref TriageApi
+
+  TriageApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub cloud-triage-agent-api-${Environment}
+      StageName: prod
+      EndpointConfiguration: REGIONAL
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+Outputs:
+  TriageApiUrl:
+    Description: URL for the triage API
+    Value: !Sub https://${TriageApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+  TriageApiBaselineUrl:
+    Description: URL for the baseline workflow endpoint
+    Value: !Sub https://${TriageApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/baseline
+  TriageApiAgentUrl:
+    Description: URL for the agent workflow endpoint
+    Value: !Sub https://${TriageApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/agent
+  TriageApiFunction:
+    Description: Triage API Lambda Function ARN
+    Value: !GetAtt TriageApiFunction.Arn

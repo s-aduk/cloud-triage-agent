@@ -1,0 +1,16 @@
+{
+  "name": "cloud-triage-agent",
+  "version": "1.0.0",
+  "description": "Cloud Triage Agent - Helps engineering teams triage cloud incidents faster",
+  "scripts": {
+    "eval:baseline": "node eval/run-baseline.js",
+    "eval:agent": "node eval/run-agent.js",
+    "eval:score": "node eval/score.js",
+    "eval": "npm run eval:baseline && npm run eval:agent && npm run eval:score",
+    "deploy": "sam deploy --guided",
+    "build": "sam build"
+  },
+  "keywords": ["aws", "lambda", "api gateway", "triage", "incident"],
+  "author": "Hackathon Team",
+  "license": "MIT"
+}

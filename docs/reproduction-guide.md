@@ -1,0 +1,236 @@
+# Reproduction Guide
+
+This guide provides step-by-step instructions for reproducing the Cloud Triage Agent project in a fresh environment.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+1. **AWS CLI** - Version 2.x
+   
+   ```bash
+   aws --version
+   # Should show aws-cli/2.x.x
+   ```
+
+2. **AWS SAM CLI** - Version 1.x
+   
+   ```bash
+   sam --version
+   # Should show SAM CLI 1.x.x
+   ```
+
+3. **Node.js** - Version 18.x or later
+   
+   ```bash
+   node --version
+   # Should show v18.x.x or higher
+   ```
+
+4. **npm** - Version 9.x or later
+   
+   ```bash
+   npm --version
+   # Should show 9.x.x or higher
+   ```
+
+5. **Git** - Version 2.x or later
+   
+   ```bash
+   git --version
+   # Should show git version 2.x.x
+   ```
+
+## Step 1: Clone the Repository
+
+```bash
+# Clone the repository (replace with actual URL)
+git clone https://github.com/s-aduk/cloud-triage-agent.git
+cd cloud-triage-agent
+```
+
+## Step 2: Install Dependencies
+
+### Backend Dependencies
+
+```bash
+cd services/triage-api
+npm install
+cd ../..
+```
+
+### Frontend Dependencies
+
+```bash
+cd apps/web
+npm install
+cd ../..
+```
+
+## Step 3: Configure AWS Credentials
+
+Ensure your AWS CLI is configured with appropriate credentials:
+
+```bash
+aws configure
+# Enter your AWS Access Key ID, Secret Access Key, region, and output format
+```
+
+## Step 4: Build and Deploy
+
+### Build the Application
+
+```bash
+sam build
+```
+
+### Deploy with Guided Prompts
+
+```bash
+sam deploy --guided
+```
+
+You will be prompted for:
+
+1. **Stack Name**: Enter a unique name (e.g., cloud-triage-agent-dev)
+2. **AWS Region**: Select your preferred region (e.g., us-east-1)
+3. **Parameter Environment**: Enter `dev` (or your preferred environment)
+4. **Confirm changes before deploy**: Enter `Y`
+5. **Allow SAM CLI IAM role creation**: Enter `Y`
+6. **Save arguments to samconfig.toml**: Enter `Y`
+
+After deployment completes, note the output values, particularly:
+
+- `TriageApiUrl`
+- `TriageApiBaselineUrl`
+- `TriageApiAgentUrl`
+
+## Step 5: Configure Frontend
+
+Create a `.env.local` file in the `apps/web` directory:
+
+```bash
+cd apps/web
+echo "NEXT_PUBLIC_API_URL=<your-api-url-from-deploy-output>" > .env.local
+cd ../..
+```
+
+Replace `<your-api-url-from-deploy-output>` with the actual `TriageApiUrl` value from the SAM deployment output.
+
+## Step 6: Run the Application
+
+### Start the Frontend
+
+```bash
+cd apps/web
+npm run dev
+```
+
+The frontend will be available at http://localhost:3000
+
+### Test the API Endpoints Directly (Optional)
+
+You can test the API endpoints using curl:
+
+```bash
+# Test baseline endpoint
+curl -X POST $TRIAGE_API_URL/baseline \
+  -H "Content-Type: application/json" \
+  -d '{"description": "EC2 instance showing 95% CPU utilization for 15 minutes", "title": "EC2 CPU Spike"}'
+
+# Test agent endpoint
+curl -X POST $TRIAGE_API_URL/agent \
+  -H "Content-Type: application/json" \
+  -d '{"description": "EC2 instance showing 95% CPU utilization for 15 minutes", "title": "EC2 CPU Spike"}'
+```
+
+## Step 7: Run Evaluation
+
+To run the evaluation scripts, you'll need to set the API_URL environment variable:
+
+```bash
+# Set the API URL (use the same value as in .env.local)
+export API_URL=<your-api-url-from-deploy-output>
+
+# Run baseline evaluation
+npm run eval:baseline
+
+# Run agent evaluation
+npm run eval:agent
+
+# Run scoring
+npm run eval:score
+
+# Or run all steps
+npm run eval
+```
+
+Results will be written to the `output/` directory:
+
+- `baseline-results.json`
+- `agent-results.json`
+- `score.json`
+
+## Step 8: Verify Results
+
+Check the score.json file to see the comparison between baseline and agent performance:
+
+```bash
+cat output/score.json
+```
+
+You should see:
+
+- Baseline accuracy percentage
+- Agent accuracy percentage
+- Improvement in accuracy
+- Detailed results for each test case
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Deployment fails due to missing permissions**
+   
+   - Ensure your IAM user/role has permissions for CloudFormation, Lambda, API Gateway, etc.
+   - Consider using administrator permissions for initial deployment (not recommended for production)
+
+2. **Frontend cannot connect to API**
+   
+   - Verify the `NEXT_PUBLIC_API_URL` in `.env.local` matches the deployed API URL
+   - Check that the API Gateway is deployed and accessible
+   - Ensure CORS settings allow requests from your frontend origin
+
+3. **Evaluation scripts fail**
+   
+   - Verify the `API_URL` environment variable is set correctly
+   - Ensure the deployed API endpoints are functioning
+   - Check network connectivity to the API Gateway
+
+4. **"Cannot find module" errors**
+   
+   - Run `npm install` in the appropriate directories
+   - Ensure you're in the correct directory when running commands
+
+### Logs and Debugging
+
+- **Lambda function logs**: Check CloudWatch Logs for the deployed Lambda functions
+- **API Gateway logs**: Enable logging in API Gateway stage settings
+- **Frontend errors**: Check browser console for React/JavaScript errors
+
+## Clean Up Resources
+
+To avoid ongoing charges, remember to delete the stack when you're finished:
+
+```bash
+sam delete
+```
+
+This will remove all AWS resources created by the SAM template.
+
+## Additional Notes
+
+- This project uses synthetic data only - no real AWS resources or data are accessed
+- The knowledge base and evaluation cases are stored as JSON files for simplicity
+- In a production implementation, you would likely use DynamoDB or S3 for the knowledge base
+- The agent workflow uses rule-based logic for demonstration; a real implementation would integrate with an LLM service like Amazon Bedrock
