@@ -12,12 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",
-    "@aws-sdk/lib-dynamodb": "^3.600.0",
-    "middy": "^0.36.0",
-    "@middy/core": "^0.36.0",
-    "@middy/http-json-body-parser": "^0.36.0",
-    "@middy/http-error-handler": "^0.36.0",
-    "@middy/http-cors": "^0.36.0"
+    "@aws-sdk/lib-dynamodb": "^3.600.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.130",
