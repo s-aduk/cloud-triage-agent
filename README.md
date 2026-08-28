@@ -110,27 +110,25 @@ npm run dev
 The frontend will be available at http://localhost:3000
 
 ## Evaluation
-Primary metric: correct triage outcome rate (incident type, severity, and next action).
-Run the evaluation to compare baseline and agent performance:
+Primary metric: correct triage outcome rate (incident type and severity).
+
+Fastest path — no AWS deployment needed:
 
 ```bash
-# Run baseline evaluation
-npm run eval:baseline
-
-# Run agent evaluation  
-npm run eval:agent
-
-# Run scoring/comparison
-npm run eval:score
-
-# Or run all steps
-npm run eval
+npm run eval:local
 ```
-Expected outputs:
-- `output/evaluation-results.csv`
-- `output/evaluation-summary.json`
 
-Results will be written to the `output/` directory.
+This builds the Lambda handlers with `tsc` and runs both workflows in-process
+against `data/evaluation-cases.json`. Current verified result: baseline
+5/10 (50.00%), agent 7/10 (70.00%) — see `docs/changelog.md` for the
+per-case breakdown, including a regression the agent has on one case.
+
+Results are written to `output/baseline-results.json`, `output/agent-results.json`,
+and `output/score.json`.
+
+Once deployed to AWS, `npm run eval:baseline` / `eval:agent` / `eval:score`
+run the same comparison against the live API Gateway endpoints instead
+(requires `API_URL` to be set — see the reproduction guide).
 
 ## Development
 

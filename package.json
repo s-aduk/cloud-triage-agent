@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Cloud Triage Agent - Helps engineering teams triage cloud incidents faster",
   "scripts": {
+    "build:api": "cd services/triage-api && npm install && npm run build",
+    "eval:local": "npm run build:api && node eval/run-local.js",
     "eval:baseline": "node eval/run-baseline.js",
     "eval:agent": "node eval/run-agent.js",
     "eval:score": "node eval/score.js",
