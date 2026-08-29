@@ -1,4 +1,4 @@
-import { agentTriageLLM, baselineTriageLLM } from '../triageServiceLLM';
+import { agentTriageLLM, baselineTriageLLM, agentTriageLLMWithTrajectory } from '../triageServiceLLM';
 import { invokeStructured } from '../bedrockClient';
 
 jest.mock('../bedrockClient', () => ({
@@ -79,6 +79,40 @@ describe('agentTriageLLM', () => {
 
     expect(result.incidentType).toBe('security');
     expect(result.severity).toBe('critical');
+  });
+});
+
+describe('agentTriageLLMWithTrajectory', () => {
+  beforeEach(() => {
+    mockedInvokeStructured.mockReset();
+  });
+
+  it('produces a 3-step trajectory: classify, retrieve, verify', async () => {
+    mockedInvokeStructured.mockResolvedValueOnce({
+      incidentType: 'throttling',
+      severity: 'medium',
+      probableCause: 'Lambda throttling suspected',
+      confidence: 0.5,
+    });
+    mockedInvokeStructured.mockResolvedValueOnce({
+      incidentType: 'cost-anomaly',
+      severity: 'medium',
+      probableCause: 'Unexpected Lambda cost increase, not throttling',
+      evidence: ['KB entry matched: Unexpected Cost Increases'],
+      nextAction: 'review AWS Cost Explorer for anomalies',
+      confidence: 0.85,
+    });
+
+    const { output, trajectory } = await agentTriageLLMWithTrajectory(COST_ANOMALY_INPUT);
+
+    expect(output.incidentType).toBe('cost-anomaly');
+    expect(trajectory.map((t) => t.step)).toEqual(['classify', 'retrieve', 'verify']);
+    // The retrieve step ran locally, no model call — confirm it's recorded
+    // without an LLM input/output shape.
+    expect(trajectory[1].input).toHaveProperty('knowledgeBaseSize');
+    // The verify step's description should call out the override, since
+    // this is exactly the regression the trajectory is meant to make visible.
+    expect(trajectory[2].description).toMatch(/OVERRODE/);
   });
 });
 

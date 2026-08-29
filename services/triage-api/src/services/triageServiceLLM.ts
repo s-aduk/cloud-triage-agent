@@ -64,6 +64,18 @@ const TRIAGE_OUTPUT_SCHEMA: JsonSchema = {
 const CLASSIFY_SYSTEM_PROMPT = `You are a cloud infrastructure incident triage assistant. Given a raw incident description, classify it. Use only the incidentType and severity values defined in the tool schema. Be decisive: pick the single best category even if the description is ambiguous.`;
 
 /**
+ * One step in an agent's execution trajectory — see docs/trajectories/ for
+ * the hackathon's "agent trajectories" deliverable, generated from these.
+ */
+export interface TrajectoryStep {
+  step: string;
+  description: string;
+  input: unknown;
+  output: unknown;
+  timestampMs: number;
+}
+
+/**
  * Baseline: a single Bedrock call, no retrieval, no verification step.
  * This mirrors the "one direct prompt with basic instructions" baseline
  * the hackathon brief describes — same underlying model as the agent below,
@@ -71,15 +83,32 @@ const CLASSIFY_SYSTEM_PROMPT = `You are a cloud infrastructure incident triage a
  * than comparing two different models.
  */
 export const baselineTriageLLM = async (input: TriageInput): Promise<TriageOutput> => {
+  return (await baselineTriageLLMWithTrajectory(input)).output;
+};
+
+export const baselineTriageLLMWithTrajectory = async (
+  input: TriageInput
+): Promise<{ output: TriageOutput; trajectory: TrajectoryStep[] }> => {
+  const trajectory: TrajectoryStep[] = [];
   const prompt = `Incident title: ${input.title || '(none provided)'}\nIncident description: ${input.description}\n\nClassify this incident and provide a full triage report.`;
 
-  return invokeStructured<TriageOutput>({
+  const output = await invokeStructured<TriageOutput>({
     system: CLASSIFY_SYSTEM_PROMPT,
     prompt,
     toolName: 'submit_triage',
     toolDescription: 'Submit the completed incident triage report.',
     schema: TRIAGE_OUTPUT_SCHEMA,
   });
+
+  trajectory.push({
+    step: 'single_call',
+    description: 'Single prompt, no tools besides the required output schema, no retrieval, no verification.',
+    input: { system: CLASSIFY_SYSTEM_PROMPT, prompt },
+    output,
+    timestampMs: Date.now(),
+  });
+
+  return { output, trajectory };
 };
 
 /**
@@ -96,19 +125,42 @@ export const baselineTriageLLM = async (input: TriageInput): Promise<TriageOutpu
  * why a correctly-retrieved KB entry got discarded there.
  */
 export const agentTriageLLM = async (input: TriageInput): Promise<TriageOutput> => {
+  return (await agentTriageLLMWithTrajectory(input)).output;
+};
+
+export const agentTriageLLMWithTrajectory = async (
+  input: TriageInput
+): Promise<{ output: TriageOutput; trajectory: TrajectoryStep[] }> => {
+  const trajectory: TrajectoryStep[] = [];
+
   // Step 1: classify (LLM, no knowledge base access yet — this is
   // deliberately the same "cold read" a keyword classifier would get)
+  const classifyPrompt = `Incident title: ${input.title || '(none provided)'}\nIncident description: ${input.description}`;
   const initial = await invokeStructured<ClassificationResult>({
     system: CLASSIFY_SYSTEM_PROMPT,
-    prompt: `Incident title: ${input.title || '(none provided)'}\nIncident description: ${input.description}`,
+    prompt: classifyPrompt,
     toolName: 'submit_classification',
     toolDescription: 'Submit the initial incident classification.',
     schema: CLASSIFICATION_SCHEMA,
+  });
+  trajectory.push({
+    step: 'classify',
+    description: 'First-pass classification from the raw incident description alone, no knowledge base access yet.',
+    input: { system: CLASSIFY_SYSTEM_PROMPT, prompt: classifyPrompt },
+    output: initial,
+    timestampMs: Date.now(),
   });
 
   // Step 2: retrieve (local similarity search, not an LLM call)
   const knowledgeBase = loadKnowledgeBase();
   const context: KnowledgeBaseEntry[] = retrieveContext(input.description, knowledgeBase);
+  trajectory.push({
+    step: 'retrieve',
+    description: `Local similarity search over ${knowledgeBase.length} knowledge base entries (not an LLM call).`,
+    input: { description: input.description, knowledgeBaseSize: knowledgeBase.length },
+    output: { retrievedCount: context.length, retrievedTitles: context.map((e) => e.title) },
+    timestampMs: Date.now(),
+  });
 
   // Step 3 + 4: verify against retrieved evidence and summarize in one call
   const contextBlock =
@@ -141,11 +193,24 @@ well, or no knowledge base entry is relevant, keep it. Cite specific evidence fo
 
   const verifySystemPrompt = `You are the verification step of a cloud incident triage agent. Your job is to catch and correct mistakes from an earlier, less-informed classification step by weighing retrieved evidence honestly — you have the authority to change the classification, not just comment on it.`;
 
-  return invokeStructured<TriageOutput>({
+  const output = await invokeStructured<TriageOutput>({
     system: verifySystemPrompt,
     prompt: verifyPrompt,
     toolName: 'submit_triage',
     toolDescription: 'Submit the final, verified incident triage report.',
     schema: TRIAGE_OUTPUT_SCHEMA,
   });
+
+  trajectory.push({
+    step: 'verify',
+    description:
+      output.incidentType !== initial.incidentType
+        ? `Verification OVERRODE the initial classification (${initial.incidentType} -> ${output.incidentType}) based on retrieved evidence.`
+        : 'Verification confirmed the initial classification against retrieved evidence.',
+    input: { system: verifySystemPrompt, prompt: verifyPrompt },
+    output,
+    timestampMs: Date.now(),
+  });
+
+  return { output, trajectory };
 };

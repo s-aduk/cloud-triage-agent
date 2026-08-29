@@ -7,6 +7,7 @@
     "test:api": "cd services/triage-api && npm install && npm test",
     "eval:local": "npm run build:api && node eval/run-local.js",
     "eval:llm": "npm run build:api && node eval/run-llm.js",
+    "trajectories": "npm run build:api && node eval/capture-trajectories.js",
     "eval:baseline": "node eval/run-baseline.js",
     "eval:agent": "node eval/run-agent.js",
     "eval:score": "node eval/score.js",

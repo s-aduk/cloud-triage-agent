@@ -155,8 +155,8 @@ You will be prompted for:
 
 After deployment completes, note the output values, particularly:
 
-- `TriageApiBaselineUrl`
-- `TriageApiAgentUrl`
+- `TriageApiUrl` (base URL — the frontend appends `/baseline`/`/agent` itself)
+- `TriageApiBaselineUrl` / `TriageApiAgentUrl` (full endpoint URLs, for direct curl testing)
 
 ## Step 5: Configure Frontend
 
@@ -168,7 +168,7 @@ echo "NEXT_PUBLIC_API_URL=<your-api-url-from-deploy-output>" > .env.local
 cd ../..
 ```
 
-Replace `<your-api-url-from-deploy-output>` with the `TriageApiBaselineUrl` value from the SAM deployment output (or point the frontend at whichever endpoint it's built to call — check `apps/web` for which one it expects).
+Replace `<your-api-url-from-deploy-output>` with the `TriageApiUrl` value (the base URL) from the SAM deployment output — the frontend code appends `/baseline` and `/agent` itself (see `apps/web/src/app/page.tsx`).
 
 ## Step 6: Run the Application
 

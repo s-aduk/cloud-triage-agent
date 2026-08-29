@@ -18,6 +18,31 @@
  * Usage:
  *   npm run eval:llm
  */
+/**
+ * LLM evaluation runner — same comparison as eval/run-local.js, but against
+ * the real Bedrock-backed handlers instead of the rule-based reference
+ * implementation.
+ *
+ * Requires:
+ *   - AWS credentials in the environment (or a default profile) with
+ *     bedrock:InvokeModel permission
+ *   - Model access enabled for the target model in the Bedrock console
+ *     (Model access -> Anthropic) in whichever region BEDROCK_MODEL_ID's
+ *     inference profile targets
+ *   - BEDROCK_MODEL_ID env var if you want to override the default in
+ *     services/triage-api/src/services/bedrockClient.ts
+ *
+ * This makes ~30 real Bedrock calls (10 cases x baseline-1-call +
+ * agent-2-calls) and will incur a small cost.
+ *
+ * Usage:
+ *   npm run eval:llm
+ *
+ * To smoke-test with fewer cases (useful if you're on a tight daily token
+ * quota and just want to confirm the wiring works before spending the full
+ * budget on all 10):
+ *   EVAL_CASE_LIMIT=2 npm run eval:llm
+ */
 const fs = require('fs');
 const path = require('path');
 
@@ -26,9 +51,14 @@ const { AgentHandler } = require('../services/triage-api/dist/handlers/agent.js'
 
 const CASES_FILE = path.join(__dirname, '..', 'data', 'evaluation-cases.json');
 const OUTPUT_DIR = path.join(__dirname, '..', 'output');
+const CASE_LIMIT = process.env.EVAL_CASE_LIMIT ? parseInt(process.env.EVAL_CASE_LIMIT, 10) : undefined;
 
 function makeEvent(caseItem) {
   return { body: JSON.stringify({ description: caseItem.description, title: caseItem.title }) };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function runHandler(handler, cases, label) {
@@ -48,6 +78,9 @@ async function runHandler(handler, cases, label) {
       console.error(`  -> threw:`, error.message);
       results.push({ caseId: caseItem.id, input: caseItem, error: error.message });
     }
+    // Small gap between calls — doesn't help a tokens-per-day quota, but
+    // avoids tripping a separate per-minute rate limit on top of it.
+    await sleep(500);
   }
   return results;
 }
@@ -90,20 +123,29 @@ function score(cases, baselineResults, agentResults) {
 }
 
 async function main() {
-  const cases = JSON.parse(fs.readFileSync(CASES_FILE, 'utf8'));
+  const allCases = JSON.parse(fs.readFileSync(CASES_FILE, 'utf8'));
+  const cases = CASE_LIMIT ? allCases.slice(0, CASE_LIMIT) : allCases;
 
+  if (CASE_LIMIT) {
+    console.log(`EVAL_CASE_LIMIT=${CASE_LIMIT} set — running ${cases.length}/${allCases.length} cases only.\n`);
+  }
   console.log('Running against Bedrock — this makes real API calls and will incur a small cost.\n');
 
   const baselineResults = await runHandler(BaselineHandler, cases, 'baseline (LLM)');
   const agentResults = await runHandler(AgentHandler, cases, 'agent (LLM)');
   const scoreResult = score(cases, baselineResults, agentResults);
+  if (CASE_LIMIT) {
+    scoreResult.partial = true;
+    scoreResult.casesRun = cases.length;
+    scoreResult.casesTotal = allCases.length;
+  }
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   fs.writeFileSync(path.join(OUTPUT_DIR, 'baseline-results-llm.json'), JSON.stringify(baselineResults, null, 2));
   fs.writeFileSync(path.join(OUTPUT_DIR, 'agent-results-llm.json'), JSON.stringify(agentResults, null, 2));
   fs.writeFileSync(path.join(OUTPUT_DIR, 'score-llm.json'), JSON.stringify(scoreResult, null, 2));
 
-  console.log('\n--- Results (LLM) ---');
+  console.log('\n--- Results (LLM)' + (CASE_LIMIT ? ` — PARTIAL: ${cases.length}/${allCases.length} cases` : '') + ' ---');
   console.log(`Baseline: ${scoreResult.baseline.correct}/${scoreResult.baseline.total} (${scoreResult.baseline.accuracy})`);
   console.log(`Agent:    ${scoreResult.agent.correct}/${scoreResult.agent.total} (${scoreResult.agent.accuracy})`);
   console.log(`Delta:    ${scoreResult.improvement.correct} cases (${scoreResult.improvement.accuracyDifference})`);

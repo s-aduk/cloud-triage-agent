@@ -54,7 +54,7 @@ export async function invokeStructured<T>(params: {
   schema: JsonSchema;
   maxTokens?: number;
 }): Promise<T> {
-  const { system, prompt, toolName, toolDescription, schema, maxTokens = 1024 } = params;
+  const { system, prompt, toolName, toolDescription, schema, maxTokens = 512 } = params;
 
   const messages: Message[] = [
     {

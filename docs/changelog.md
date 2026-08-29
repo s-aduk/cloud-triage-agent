@@ -97,6 +97,17 @@ supporting "cost-anomaly", final output "cost-anomaly". That's a test of the
 code path, not of the model's actual judgment — real accuracy numbers below
 still need a real run.
 
+**Agent trajectories (hackathon deliverable):** `agentTriageLLMWithTrajectory`
+and `baselineTriageLLMWithTrajectory` capture a step-by-step record (prompts,
+tool responses, and — for the agent — whether verification overrode the
+initial guess) for every call. `npm run trajectories` runs this against real
+Bedrock calls for a couple of representative cases and writes them to
+`docs/trajectories/`. Since real Bedrock access is still pending (see below),
+`docs/trajectories/ILLUSTRATIVE-case-010-*.md` demonstrates the format and
+the override mechanism using the same mocked-response approach as the unit
+test — clearly labeled as illustrative, not a real run, per
+`docs/trajectories/README.md`.
+
 **Verified so far (no live Bedrock calls made yet):**
 - `tsc` build is clean with the new Bedrock client and LLM service files
 - `npm run eval:local` still reproduces the unchanged rule-based 50%/70%

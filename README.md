@@ -144,6 +144,19 @@ Once deployed to AWS, `npm run eval:baseline` / `eval:agent` / `eval:score`
 run the same comparison against the live API Gateway endpoints instead
 (requires `API_URL` to be set — see the reproduction guide).
 
+## Agent trajectories
+
+Representative execution traces (prompts, tool/retrieval responses, and
+whether verification overrode an earlier guess) for both workflows:
+
+```bash
+npm run trajectories
+```
+
+Writes to `docs/trajectories/` — see `docs/trajectories/README.md` for what's
+a real capture vs. the current illustrative example (mocked, pending Bedrock
+account access — see `docs/changelog.md`).
+
 ## Development
 
 ### Backend (Lambda)

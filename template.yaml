@@ -119,11 +119,14 @@ Resources:
         AllowOrigin: "'*'"
 
 Outputs:
+  TriageApiUrl:
+    Description: Base API URL for the frontend (NEXT_PUBLIC_API_URL) — appends /baseline or /agent itself
+    Value: !Sub https://${TriageApi}.execute-api.${AWS::Region}.amazonaws.com/prod
   TriageApiBaselineUrl:
-    Description: URL for the baseline workflow endpoint
+    Description: Full URL for the baseline workflow endpoint (for direct curl testing)
     Value: !Sub https://${TriageApi}.execute-api.${AWS::Region}.amazonaws.com/prod/baseline
   TriageApiAgentUrl:
-    Description: URL for the agent workflow endpoint
+    Description: Full URL for the agent workflow endpoint (for direct curl testing)
     Value: !Sub https://${TriageApi}.execute-api.${AWS::Region}.amazonaws.com/prod/agent
   BaselineFunctionArn:
     Description: Baseline Lambda Function ARN
