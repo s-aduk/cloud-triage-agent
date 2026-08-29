@@ -27,6 +27,17 @@ Requires only Node.js 18+ and npm. Runtime: well under a minute; no AWS
 credentials, no cost. Full results are written to `output/baseline-results.json`,
 `output/agent-results.json`, and `output/score.json`.
 
+To reproduce the same comparison against the real, deployed LLM logic
+(Bedrock) instead of the rule-based reference — no API Gateway/deployment
+needed, just AWS credentials with Bedrock access:
+
+```bash
+npm run eval:llm
+```
+
+See the "Bedrock setup" step below for the model-access prerequisite; this
+makes ~30 real model calls and incurs a small cost.
+
 The steps below cover the full AWS deployment (SAM/Lambda/API Gateway) plus
 the frontend, for anyone who wants to exercise the deployed API or the UI
 rather than just the evaluation.
@@ -105,6 +116,20 @@ aws configure
 # Enter your AWS Access Key ID, Secret Access Key, region, and output format
 ```
 
+## Step 3b: Enable Bedrock model access
+
+Both workflows call Bedrock, so this step is required even for `npm run eval:llm` (not just for deploying):
+
+1. In the AWS Console, go to **Bedrock -> Model access** in the region you plan to use.
+2. Request/enable access to the Anthropic Claude model referenced by `template.yaml`'s `BedrockModelId` parameter (default: `us.anthropic.claude-haiku-4-5-20251001-v1:0`).
+3. Confirm the inference profile ID is valid for your account/region:
+   ```bash
+   aws bedrock list-inference-profiles --region <your-region>
+   ```
+   If it's not listed, or you're in a different region, update `BedrockModelId` in `template.yaml` (for deployment) or set the `BEDROCK_MODEL_ID` environment variable (for `npm run eval:llm`) to a valid inference profile ID for your account.
+
+Without this step, calls fail with `AccessDeniedException` even with correct IAM permissions — this is a Bedrock console setting, not an IAM policy.
+
 ## Step 4: Build and Deploy
 
 ### Build the Application
@@ -130,7 +155,6 @@ You will be prompted for:
 
 After deployment completes, note the output values, particularly:
 
-- `TriageApiUrl`
 - `TriageApiBaselineUrl`
 - `TriageApiAgentUrl`
 
@@ -144,7 +168,7 @@ echo "NEXT_PUBLIC_API_URL=<your-api-url-from-deploy-output>" > .env.local
 cd ../..
 ```
 
-Replace `<your-api-url-from-deploy-output>` with the actual `TriageApiUrl` value from the SAM deployment output.
+Replace `<your-api-url-from-deploy-output>` with the `TriageApiBaselineUrl` value from the SAM deployment output (or point the frontend at whichever endpoint it's built to call — check `apps/web` for which one it expects).
 
 ## Step 6: Run the Application
 
@@ -162,13 +186,13 @@ The frontend will be available at http://localhost:3000
 You can test the API endpoints using curl:
 
 ```bash
-# Test baseline endpoint
-curl -X POST $TRIAGE_API_URL/baseline \
+# Test baseline endpoint (use the TriageApiBaselineUrl output value directly)
+curl -X POST $TRIAGE_API_BASELINE_URL \
   -H "Content-Type: application/json" \
   -d '{"description": "EC2 instance showing 95% CPU utilization for 15 minutes", "title": "EC2 CPU Spike"}'
 
-# Test agent endpoint
-curl -X POST $TRIAGE_API_URL/agent \
+# Test agent endpoint (use the TriageApiAgentUrl output value directly)
+curl -X POST $TRIAGE_API_AGENT_URL \
   -H "Content-Type: application/json" \
   -d '{"description": "EC2 instance showing 95% CPU utilization for 15 minutes", "title": "EC2 CPU Spike"}'
 ```
@@ -241,6 +265,18 @@ You should see:
    - Run `npm install` in the appropriate directories
    - Ensure you're in the correct directory when running commands
 
+5. **`AccessDeniedException` calling Bedrock**
+
+   - Model access has to be enabled per-region in the Bedrock console (Model access -> Anthropic) — this is separate from IAM permissions, and the IAM policy in `template.yaml` alone won't fix it. See Step 3b above.
+
+6. **`ValidationException: ... with on-demand throughput isn't supported`**
+
+   - You're using a bare model ID instead of an inference profile ID. Current-generation Claude models on Bedrock require a region-prefixed inference profile ID (e.g. `us.anthropic....`), not the bare `anthropic....` model ID. Check `BedrockModelId` in `template.yaml` / `BEDROCK_MODEL_ID` env var.
+
+7. **Bedrock call succeeds but the handler returns a 502 with "Bedrock did not return a tool_use block"**
+
+   - Usually means the configured model doesn't support forced tool-use the way `bedrockClient.ts` expects it to, or the inference profile ID is valid but points to the wrong region for your account. Try the request with the AWS CLI (`aws bedrock-runtime converse ...`) directly to isolate whether it's the model/region or the application code.
+
 ### Logs and Debugging
 
 - **Lambda function logs**: Check CloudWatch Logs for the deployed Lambda functions
@@ -262,4 +298,4 @@ This will remove all AWS resources created by the SAM template.
 - This project uses synthetic data only - no real AWS resources or data are accessed
 - The knowledge base and evaluation cases are stored as JSON files for simplicity
 - In a production implementation, you would likely use DynamoDB or S3 for the knowledge base
-- The agent workflow uses rule-based logic for demonstration; a real implementation would integrate with an LLM service like Amazon Bedrock
+- Both the baseline and agent workflows call Amazon Bedrock (see `services/triage-api/src/services/bedrockClient.ts` and `triageServiceLLM.ts`). A rule-based reference implementation of both (`triageService.ts`) is kept for `npm run eval:local`, which needs no AWS credentials — see `docs/changelog.md` for why that comparison was worth keeping.

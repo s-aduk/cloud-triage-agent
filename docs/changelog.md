@@ -76,9 +76,46 @@ categories that describe the same incident from different angles, not a
 comprehension failure. Worth tightening the label taxonomy before the next
 iteration.
 
-## Next iteration (planned)
+## Iteration: LLM-backed baseline and agent (Bedrock)
 
-Replace both keyword classifiers with an LLM call, keeping the same
-classify → retrieve → verify → summarize shape, but making verification
-capable of overturning the initial classification when retrieved evidence
-disagrees — directly targeting the case-010 failure mode above.
+**What changed:** Both workflows now call Amazon Bedrock instead of keyword
+matching. `baselineTriageLLM` is a single call, no retrieval, no
+verification — the direct LLM equivalent of the rule-based baseline above.
+`agentTriageLLM` keeps the same classify → retrieve → verify → summarize
+shape as the rule-based agent, with one deliberate change: **the verify
+step is explicitly instructed that it may override the initial
+classification when retrieved knowledge-base evidence disagrees with it**,
+instead of only being able to adjust confidence. This is a direct fix for
+the case-010 failure mode above, where a correctly-retrieved KB entry was
+discarded because the rule-based verifier had no mechanism to act on
+disagreement.
+
+A mocked-Bedrock-client test (`src/services/__tests__/triageServiceLLM.test.ts`)
+confirms this override mechanism actually fires given a case shaped like
+case-010: initial classification "throttling", retrieved KB evidence
+supporting "cost-anomaly", final output "cost-anomaly". That's a test of the
+code path, not of the model's actual judgment — real accuracy numbers below
+still need a real run.
+
+**Verified so far (no live Bedrock calls made yet):**
+- `tsc` build is clean with the new Bedrock client and LLM service files
+- `npm run eval:local` still reproduces the unchanged rule-based 50%/70%
+  numbers above, confirming the refactor (renaming rule-based functions,
+  switching knowledge-base loading from `readFileSync` to a static JSON
+  import for esbuild-bundling compatibility) didn't change rule-based
+  behavior
+- Unit tests pass against a mocked Bedrock client (3/3)
+- `template.yaml` lints clean with the new split Lambda functions, Bedrock
+  IAM permissions, and esbuild build method
+
+**Not yet done — real accuracy numbers pending:** `npm run eval:llm` runs
+the same 10-case comparison against live Bedrock calls, but hasn't been run
+yet (this needs AWS credentials and Bedrock model access that aren't
+available in the environment these numbers were produced in). This section
+will be replaced with real baseline-vs-agent LLM numbers, evidence files,
+and a challenging-case writeup — the same standard the rule-based section
+above was held to — once `npm run eval:llm` has actually been run once.
+
+**Do not treat any percentage in this section as measured until this note
+is replaced.** The whole point of the earlier iteration was catching
+numbers that were written before they were run.

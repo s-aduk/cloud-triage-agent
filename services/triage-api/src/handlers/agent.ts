@@ -1,13 +1,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { agentTriage, TriageInput } from '../services/triageService';
+import { agentTriageRuleBased, TriageInput } from '../services/triageService';
+import { agentTriageLLM } from '../services/triageServiceLLM';
 
 /**
- * Agent workflow: classify -> retrieve context -> verify -> summarize
- * Takes incident description and returns structured triage report with enhanced reasoning
+ * Agent workflow: classify -> retrieve context -> verify -> summarize,
+ * using Bedrock for classify/verify. See services/triageServiceLLM.ts for
+ * the implementation and docs/changelog.md for why verification is allowed
+ * to override the initial classification.
  */
 export const AgentHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    // Parse input
     if (!event.body) {
       return {
         statusCode: 400,
@@ -17,7 +19,6 @@ export const AgentHandler = async (event: APIGatewayProxyEvent): Promise<APIGate
 
     const input: TriageInput = JSON.parse(event.body);
 
-    // Validate input
     if (!input.description) {
       return {
         statusCode: 400,
@@ -25,8 +26,7 @@ export const AgentHandler = async (event: APIGatewayProxyEvent): Promise<APIGate
       };
     }
 
-    // Run the agent workflow
-    const output = await agentTriage(input);
+    const output = await agentTriageLLM(input);
 
     return {
       statusCode: 200,
@@ -35,8 +35,21 @@ export const AgentHandler = async (event: APIGatewayProxyEvent): Promise<APIGate
   } catch (error) {
     console.error('Agent handler error:', error);
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
+      statusCode: 502,
+      body: JSON.stringify({
+        error: 'Triage model call failed',
+        detail: error instanceof Error ? error.message : String(error),
+      }),
     };
   }
+};
+
+/**
+ * Lambda handler wrapping the rule-based agent, used only by
+ * `npm run eval:local`. Not deployed (see template.yaml).
+ */
+export const AgentHandlerRuleBased = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const input: TriageInput = JSON.parse(event.body || '{}');
+  const output = await agentTriageRuleBased(input);
+  return { statusCode: 200, body: JSON.stringify(output) };
 };

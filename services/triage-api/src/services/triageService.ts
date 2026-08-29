@@ -1,5 +1,4 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import knowledgeBaseData from '../../../../data/knowledge-base.json';
 
 // Types for our triage system
 export interface TriageInput {
@@ -17,7 +16,7 @@ export interface TriageOutput {
 }
 
 // Knowledge base entry type
-interface KnowledgeBaseEntry {
+export interface KnowledgeBaseEntry {
   id: string;
   title: string;
   symptoms: string[];
@@ -27,19 +26,14 @@ interface KnowledgeBaseEntry {
   confidence_factors: string[];
 }
 
-// Load knowledge base from file
+// Load knowledge base. This is a static import (see top of file), not a
+// runtime file read: both tsc and esbuild resolve and inline the JSON at
+// build time, so this works whether the compiled output sits in
+// dist/services/ (tsc, preserving directory structure) or gets bundled into
+// a single file at the CodeUri root (esbuild, for the deployed Lambda) —
+// there's no __dirname-relative path to break in either case.
 const loadKnowledgeBase = (): KnowledgeBaseEntry[] => {
-  try {
-    // In a real Lambda, we might load from S3 or DynamoDB, but for simplicity we load from local file
-    // Note: This is for demonstration. In production, we would use a proper data store.
-    const filePath = join(__dirname, '../../../..', 'data', 'knowledge-base.json');
-    const data = readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(data);
-    return parsed.cloud_incidents || [];
-  } catch (error) {
-    console.warn('Could not load knowledge base, using empty array:', error);
-    return [];
-  }
+  return (knowledgeBaseData as { cloud_incidents?: KnowledgeBaseEntry[] }).cloud_incidents || [];
 };
 
 // Simple text similarity function (for demo)
@@ -158,7 +152,7 @@ const classifyIncident = (description: string): { incidentType: string; severity
 };
 
 // Retrieve relevant knowledge base entries
-const retrieveContext = (description: string, kb: KnowledgeBaseEntry[]): KnowledgeBaseEntry[] => {
+export const retrieveContext = (description: string, kb: KnowledgeBaseEntry[]): KnowledgeBaseEntry[] => {
   // Score each KB entry by similarity to the description
   const scored = kb.map(entry => {
     // Create a text representation of the entry for comparison
@@ -236,8 +230,11 @@ const verifyClassification = (
   };
 };
 
-// Main agent workflow function
-export const agentTriage = async (input: TriageInput): Promise<TriageOutput> => {
+// Main agent workflow function (rule-based reference implementation — see
+// triageServiceLLM.ts for the Bedrock-backed version used in the deployed
+// handlers). Kept for the fast, free, no-AWS-credentials sanity check in
+// `npm run eval:local`.
+export const agentTriageRuleBased = async (input: TriageInput): Promise<TriageOutput> => {
   // Step 1: Classify
   const classification = classifyIncident(input.description);
 

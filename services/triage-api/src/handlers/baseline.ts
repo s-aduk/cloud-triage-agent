@@ -1,13 +1,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { TriageInput, TriageOutput } from '../services/triageService';
+import { baselineTriageLLM } from '../services/triageServiceLLM';
 
 /**
- * Baseline workflow: simple one-prompt triage
- * Takes incident description and returns structured triage report
+ * Baseline workflow: a single Bedrock call with a fixed prompt, no
+ * retrieval, no verification step. See docs/changelog.md for the
+ * rule-based baseline this replaced and the numbers that motivated
+ * moving to an LLM here.
  */
 export const BaselineHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    // Parse input
     if (!event.body) {
       return {
         statusCode: 400,
@@ -17,7 +19,6 @@ export const BaselineHandler = async (event: APIGatewayProxyEvent): Promise<APIG
 
     const input: TriageInput = JSON.parse(event.body);
 
-    // Validate input
     if (!input.description) {
       return {
         statusCode: 400,
@@ -25,10 +26,7 @@ export const BaselineHandler = async (event: APIGatewayProxyEvent): Promise<APIG
       };
     }
 
-    // Simple baseline: use a basic prompt to generate triage report
-    // In a real implementation, this would call an LLM with a fixed prompt
-    // For this example, we'll simulate with a simple rule-based approach
-    const output = generateBaselineTriage(input);
+    const output = await baselineTriageLLM(input);
 
     return {
       statusCode: 200,
@@ -37,20 +35,23 @@ export const BaselineHandler = async (event: APIGatewayProxyEvent): Promise<APIG
   } catch (error) {
     console.error('Baseline handler error:', error);
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
+      statusCode: 502,
+      body: JSON.stringify({
+        error: 'Triage model call failed',
+        detail: error instanceof Error ? error.message : String(error),
+      }),
     };
   }
 };
 
 /**
- * Simple baseline triage generation (rule-based for demo)
- * In production, this would be an LLM call with a fixed prompt
+ * Rule-based reference implementation (the original baseline, kept for
+ * `npm run eval:local` so a fast, free, no-AWS-credentials sanity check
+ * stays available). Not used by the deployed Lambda handler above.
  */
-function generateBaselineTriage(input: TriageInput): TriageOutput {
+export function generateBaselineTriageRuleBased(input: TriageInput): TriageOutput {
   const description = input.description.toLowerCase();
 
-  // Simple keyword-based classification (for demo purposes)
   let incidentType = 'unknown';
   let severity = 'low';
   let probableCause = 'insufficient information';
@@ -58,7 +59,6 @@ function generateBaselineTriage(input: TriageInput): TriageOutput {
   let nextAction = 'gather more information';
   let confidence = 0.3;
 
-  // Check for keywords
   if (description.includes('cpu') || description.includes('processor')) {
     incidentType = 'performance';
     severity = 'high';
@@ -117,7 +117,6 @@ function generateBaselineTriage(input: TriageInput): TriageOutput {
     confidence = 0.6;
   }
 
-  // If we didn't match any specific pattern, keep unknown but adjust confidence slightly
   if (incidentType === 'unknown') {
     confidence = 0.2;
   }
@@ -131,3 +130,13 @@ function generateBaselineTriage(input: TriageInput): TriageOutput {
     confidence,
   };
 }
+
+/**
+ * Lambda handler wrapping the rule-based baseline, used only by
+ * `npm run eval:local`. Not deployed (see template.yaml).
+ */
+export const BaselineHandlerRuleBased = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const input: TriageInput = JSON.parse(event.body || '{}');
+  const output = generateBaselineTriageRuleBased(input);
+  return { statusCode: 200, body: JSON.stringify(output) };
+};

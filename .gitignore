@@ -4,3 +4,6 @@ dist/
 samconfig.toml
 *.log
 .env.local
+
+# NOTE: output/*.json is intentionally NOT ignored — those files are the
+# evidence backing docs/changelog.md and should be committed.

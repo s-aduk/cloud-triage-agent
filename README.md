@@ -1,6 +1,6 @@
 # Cloud Triage Agent
 
-A hackathon-ready project that helps small engineering teams triage cloud incidents faster by providing structured analysis of raw incident inputs. Includes both a baseline (simple one-prompt) and agent (multi-step with retrieval/verification) workflow for comparison.
+A hackathon-ready project that helps small engineering teams triage cloud incidents faster by providing structured analysis of raw incident inputs. Includes both a baseline (single Bedrock call) and agent (multi-step with retrieval + verification, also Bedrock-backed) workflow for comparison. A rule-based reference implementation of both is also kept for a fast, free, no-AWS-credentials sanity check — see `docs/changelog.md` for why that comparison mattered before the LLM was wired in.
 
 ## Who this is for
 
@@ -12,8 +12,8 @@ Cloud incidents usually arrive with poor context. Engineers must manually inspec
 
 ## Baseline vs Agent
 
-- **Baseline**: Single prompt that summarizes the incident without tools or verification.
-- **Agent**: Multi-step workflow that classifies the incident, retrieves context, verifies the conclusion, and returns a structured triage report.
+- **Baseline**: A single Bedrock call with a fixed prompt — no tools, no retrieval, no verification.
+- **Agent**: Multi-step workflow — classifies the incident (Bedrock), retrieves relevant knowledge base entries (local similarity search), then verifies the classification against that evidence (Bedrock, with authority to override the initial guess), and returns a structured triage report.
 
 ## Features
 
@@ -35,10 +35,12 @@ cloud-triage-agent/
 │   └── knowledge-base.json       # Knowledge base for agent retrieval
 ├── services/
 │   └── triage-api/               # Lambda backend
-│       ├── template.yaml         # SAM template for API service
 │       └── src/                  # Source code
-│           ├── handlers/         # Lambda handlers
+│           ├── handlers/         # Lambda handlers (baseline.ts, agent.ts)
 │           └── services/         # Shared triage logic
+│               ├── bedrockClient.ts     # Bedrock Converse API wrapper (forced tool-use JSON)
+│               ├── triageService.ts     # Types, KB retrieval, rule-based reference impl
+│               └── triageServiceLLM.ts  # Bedrock-backed baseline + agent workflows
 ├── eval/                         # Evaluation scripts
 │   ├── run-baseline.ts           # Baseline evaluation
 │   ├── run-agent.ts              # Agent evaluation
@@ -62,6 +64,7 @@ cloud-triage-agent/
 - [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) installed
 - [Node.js](https://nodejs.org/) (v18 or later) and npm
 - [Git](https://git-scm.com/)
+- **Bedrock model access enabled** for the model in `template.yaml`'s `BedrockModelId` parameter (default: `us.anthropic.claude-haiku-4-5-20251001-v1:0`) — in the Bedrock console, under Model access, request/enable access for Anthropic models in your target region. Requests fail with `AccessDeniedException` until this is done, even with correct IAM permissions.
 
 ## Setup and Deployment
 
@@ -94,7 +97,7 @@ sam deploy --guided
 ```
 
 ### 4. Configure frontend
-After deployment, note the API URL from the outputs (look for `TriageApiUrl`). Then:
+After deployment, note the endpoint URLs from the stack outputs (`TriageApiBaselineUrl` and `TriageApiAgentUrl`). Then:
 
 ```bash
 # In apps/web/.env.local
@@ -112,19 +115,30 @@ The frontend will be available at http://localhost:3000
 ## Evaluation
 Primary metric: correct triage outcome rate (incident type and severity).
 
-Fastest path — no AWS deployment needed:
+**Rule-based reference comparison — free, no AWS credentials needed:**
 
 ```bash
 npm run eval:local
 ```
 
-This builds the Lambda handlers with `tsc` and runs both workflows in-process
-against `data/evaluation-cases.json`. Current verified result: baseline
-5/10 (50.00%), agent 7/10 (70.00%) — see `docs/changelog.md` for the
-per-case breakdown, including a regression the agent has on one case.
+Builds the rule-based reference handlers and runs both workflows in-process
+against `data/evaluation-cases.json`. Verified result: baseline 5/10
+(50.00%), agent 7/10 (70.00%). This is the comparison documented in the
+first half of `docs/changelog.md`, kept as a fast sanity check — it is not
+what's deployed.
 
-Results are written to `output/baseline-results.json`, `output/agent-results.json`,
-and `output/score.json`.
+**LLM (Bedrock) evaluation — requires AWS credentials + Bedrock model access, incurs a small cost:**
+
+```bash
+npm run eval:llm
+```
+
+Builds and runs the actual deployed handlers (`baseline.ts`, `agent.ts`),
+which call Bedrock. Makes 10 baseline calls + 20 agent calls (classify +
+verify per case) — roughly 30 real model invocations total. Results are
+written to `output/baseline-results-llm.json`, `output/agent-results-llm.json`,
+and `output/score-llm.json`. See `docs/changelog.md` for how these numbers
+compare to the rule-based reference once you've run it.
 
 Once deployed to AWS, `npm run eval:baseline` / `eval:agent` / `eval:score`
 run the same comparison against the live API Gateway endpoints instead
@@ -133,10 +147,15 @@ run the same comparison against the live API Gateway endpoints instead
 ## Development
 
 ### Backend (Lambda)
-The backend is located in `services/triage-api/src/`. 
-- `handlers/baseline.ts` - Simple one-prompt triage
-- `handlers/agent.ts` - Enhanced triage with classify→retrieve→verify→summarize
-- `services/triageService.ts` - Shared logic and utilities
+The backend is located in `services/triage-api/src/`.
+- `handlers/baseline.ts` - Deployed handler (`BaselineHandler`, Bedrock-backed) + rule-based reference (`BaselineHandlerRuleBased`, used by `eval:local` only)
+- `handlers/agent.ts` - Deployed handler (`AgentHandler`, Bedrock-backed) + rule-based reference (`AgentHandlerRuleBased`, used by `eval:local` only)
+- `services/bedrockClient.ts` - Bedrock Converse API wrapper; forces tool-use so responses are always structured JSON matching a schema, never free text to parse
+- `services/triageServiceLLM.ts` - `baselineTriageLLM` (single call) and `agentTriageLLM` (classify → retrieve → verify, verify can override classify)
+- `services/triageService.ts` - Shared types, knowledge base loading/retrieval, and the rule-based reference implementations
+- `services/__tests__/triageServiceLLM.test.ts` - Jest tests with a mocked Bedrock client, including a regression test pinning that verification can override a wrong initial classification
+
+Run these with `npm run test:api` from the repo root (no AWS credentials needed — the Bedrock client is mocked).
 
 ### Frontend (Next.js)
 The frontend is in `apps/web/`:
