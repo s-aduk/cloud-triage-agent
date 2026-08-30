@@ -26,12 +26,16 @@ Parameters:
       over a plain parameter.
   GeminiModel:
     Type: String
-    Default: gemini-2.5-flash-lite
+    Default: gemini-3.5-flash-lite
     Description: >
-      Gemini model ID used by both workflows. Deliberately Flash-Lite, not
-      Flash — Flash's free-tier daily quota was cut sharply in December
-      2025 (this project hit a 20-requests/day cap on one account); see
-      docs/changelog.md for the full story.
+      Gemini model ID used by both workflows. Updated from gemini-2.5-flash-lite
+      to gemini-3.5-flash-lite — all of this project's verified real-run
+      results (see docs/changelog.md) are against 3.5, and 2.5-flash-lite's
+      free daily quota proved unreliable on the account this was tested
+      with (a flat ~20/day cap, not the ~1,000/day documented default).
+      2.5-flash-lite remains supported as a fallback (geminiClient.ts
+      picks the correct thinking-config field for either generation) if
+      3.x isn't available on your account.
 
 # Global settings for all functions
 Globals:

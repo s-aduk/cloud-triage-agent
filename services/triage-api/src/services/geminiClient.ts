@@ -1,15 +1,17 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 
-// Gemini 2.5 Flash-Lite: free tier via Google AI Studio (aistudio.google.com),
-// no credit card required. Deliberately NOT gemini-2.5-flash: Google cut
-// Flash's free daily quota sharply in December 2025, and this project hit
-// it directly — a real run returned a daily cap of just 20 requests for
-// Flash on this account. Flash-Lite's free daily quota is far more
-// generous (~1,000/day per Google's docs at time of writing) and it's a
-// reasoning model too — plenty for a structured-classification task like
-// this. Get a key at https://aistudio.google.com/apikey and set
-// GEMINI_API_KEY. See docs/changelog.md for the full quota debugging story.
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+// Gemini 3.5 Flash-Lite: free tier via Google AI Studio (aistudio.google.com),
+// no credit card required. All of this project's verified real-run
+// results (see docs/changelog.md) are against this model. It was reached
+// via GEMINI_MODEL override during debugging — gemini-2.5-flash-lite (the
+// original default here) turned out to have an unreliable free daily
+// quota on the account this was tested with (a flat ~20/day cap, not the
+// ~1,000/day documented default; Gemini 2.5 Flash itself was cut even
+// further, to as little as 20/day, in a December 2025 policy change).
+// 2.5-flash-lite is still supported as a fallback — buildThinkingConfig()
+// below picks the correct thinking-config field for either generation.
+// Get a key at https://aistudio.google.com/apikey and set GEMINI_API_KEY.
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const MODEL = process.env.GEMINI_MODEL || DEFAULT_MODEL;
 
 let client: GoogleGenAI | undefined;

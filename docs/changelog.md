@@ -698,3 +698,52 @@ Each step targeted a specific, previously-diagnosed failure mode rather
 than re-tuning blindly in response to a single aggregate score — that
 discipline is what turned "the agent is worse" into a false alarm from a
 missing feature, not a real architectural weakness.
+
+## Currently committed result: 100% vs. 80% — one case beyond what's documented above
+
+The `output/score-llm.json`/`output/{baseline,agent}-results-llm.json`
+actually committed alongside this changelog entry (generated
+`2026-08-30T02:00:03Z`) show a result one case better than the "90%"
+documented immediately above:
+
+| Metric | Baseline (LLM) | Agent (LLM) | Delta |
+|---|---|---|---|
+| Correct triage (type + severity) | 8/10 (80.00%) | **10/10 (100.00%)** | **+2 cases (+20.00%)** |
+
+The difference from the 90% run above is exactly the case that section
+predicted as the next thing to fix: **case-001 (EC2 CPU Spike) is now
+correct for the agent** (`performance`/`high`, matching expected — baseline
+still misses it at `performance`/`medium`, unchanged). Worth being precise
+about what caused this: checking the code for the "next candidate fix"
+floated above (making the verify prompt trust a KB entry's
+`typical_severity` more assertively) — **that change was not made.** The
+prompt content is identical to what the 90% run used. This is the same
+code producing a better result on a repeat call, which means it's most
+plausibly ordinary LLM sampling variance (temperature 0 and
+`thinkingLevel: MINIMAL` reduce but don't eliminate run-to-run variation),
+not a fix that should be credited to anything written above.
+
+This is worth stating plainly rather than quietly adopting the better
+number: **case-001's outcome for the agent is not yet a reproducibly fixed
+behavior**, just a single observation that happened to land correctly. The
+`kb-001`-trust fix proposed in the 90% section above is still the right
+next step if reproducibility on this specific case matters going forward
+— this run doesn't substitute for making that change, it just means the
+failure mode isn't 100%-reproducible either.
+
+That said, **this is the real, currently-committed, complete
+(`"complete": true` on both) evaluation result**, and per this project's
+own standard of using the evidence actually on file rather than a
+better-sounding earlier one, 100%/80% — not 90%/80% — is the number that
+belongs in any summary, demo, or submission material. The per-case
+analysis above (case-004's genuine retrieval-caught win, case-007/009's
+confirmed rubric fixes, the honestly-flagged self-inflicted taxonomy
+ambiguity) is unchanged and still the substantive story; this section only
+updates the headline number and is explicit about which part of the
+improvement is confirmed-mechanism versus observed-but-unexplained.
+
+**Verified:** `tsc` builds clean; all 4 mocked-client unit tests
+(unchanged) still pass; `npm run eval:local` still reproduces the
+identical rule-based 50%/70% numbers — none of this session's verification
+work altered rule-based behavior. `output/score-llm.json` confirms
+`"complete": true` for both workflows.

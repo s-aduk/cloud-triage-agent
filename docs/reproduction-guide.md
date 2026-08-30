@@ -36,12 +36,13 @@ export GEMINI_API_KEY=<your-key>   # free, no credit card: https://aistudio.goog
 npm run eval:llm
 ```
 
-This makes ~30 real model calls, using `gemini-2.5-flash-lite` by default
-(not Flash — Flash's free daily quota was cut sharply in December 2025;
-this project hit a 20-requests/day cap directly on one account. Flash-Lite
-is generally more generous, but some accounts still see a low flat daily
-cap regardless of model — this project measured ~20/day on one account
-even for Flash-Lite. See `docs/changelog.md` for the full debugging story).
+This makes ~30 real model calls, using `gemini-3.5-flash-lite` by default —
+all of this project's verified real-run results (see `docs/changelog.md`)
+are against this model. `gemini-2.5-flash-lite` (the original default) is
+still supported via `GEMINI_MODEL=gemini-2.5-flash-lite`, but proved
+unreliable on the account this was tested with (a flat ~20/day cap, not
+the ~1,000/day documented default; full `gemini-2.5-flash` was cut even
+further, to as little as 20/day, in a December 2025 policy change).
 If your daily quota doesn't cover all ~30 calls in one sitting, that's
 fine — `eval/run-llm.js` is resumable: re-run the same command once your
 quota resets and it will only retry cases that previously failed, not the
@@ -166,7 +167,7 @@ You will be prompted for:
 2. **AWS Region**: Select your preferred region (e.g., us-east-1)
 3. **Parameter Environment**: Enter `dev` (or your preferred environment)
 4. **Parameter GeminiApiKey**: Paste the key from Step 3b
-5. **Parameter GeminiModel**: Press enter to accept the default (`gemini-2.5-flash-lite`)
+5. **Parameter GeminiModel**: Press enter to accept the default (`gemini-3.5-flash-lite`)
 6. **Confirm changes before deploy**: Enter `Y`
 7. **Allow SAM CLI IAM role creation**: Enter `Y`
 8. **Save arguments to samconfig.toml**: Enter `Y` (note: this writes your API key into `samconfig.toml` in plain text — don't commit that file; for anything beyond local testing, use Secrets Manager or SSM Parameter Store instead of a plain CloudFormation parameter)

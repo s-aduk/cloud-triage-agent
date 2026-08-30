@@ -187,33 +187,41 @@ The frontend is in `apps/web/`:
 ## Measured Improvement
 
 Full case-by-case evidence and the iteration history are in
-`docs/changelog.md`. Final confirmed numbers, from a real (non-mocked,
-non-illustrative) `npm run eval:llm` run against `gemini-3.5-flash-lite`:
+`docs/changelog.md`. Currently committed numbers, from a real (non-mocked,
+non-illustrative), complete (`"complete": true`) `npm run eval:llm` run
+against `gemini-3.5-flash-lite`:
 
 | Metric | Simple baseline | Agent | Change |
 |---|---|---|---|
 | Correct triage (type + severity), rule-based (`eval:local`) | 5/10 (50%) | 7/10 (70%) | +2 cases |
-| Correct triage (type + severity), Gemini-backed (`eval:llm`) | 8/10 (80%) | 9/10 (90%) | +1 case |
+| Correct triage (type + severity), Gemini-backed (`eval:llm`) | 8/10 (80%) | 10/10 (100%) | +2 cases |
 
-The agent's one confirmed win over the baseline (case-004, Lambda
+The agent's clearest confirmed win over the baseline (case-004, Lambda
 Throttling) is a genuine case of verification catching a classification
 mistake: the baseline's single blind call misread it as
 `resource-exhaustion`; the agent's classify step made the identical
 mistake, but the verify step, grounded in the knowledge base's canonical
 label for that failure pattern, corrected it before it reached the output.
+See `docs/changelog.md` for why the agent's other point of improvement
+over an earlier 90% run (case-001) is flagged there as an unreproduced
+observation, not a confirmed fix — the same code produced both results,
+so that specific case's outcome may vary run to run.
 
 ## Main Failure Mode & Hot Take
 
-**Main failure mode still open:** case-001 (EC2 CPU Spike — sustained 95%
-CPU, 5x latency increase) is misclassified as `medium` severity instead of
-`high` by both the baseline and the agent, on the most recent run. It's a
-shared miss, not an agent-specific one, which means it's a prompt/rubric
-calibration problem rather than a retrieval-coverage problem — the
-matching knowledge base entry exists and is presumably retrieved, but
-isn't yet trusted assertively enough by the verify step when its
-`typical_severity` and the incident's own symptoms line up closely. See
-`docs/changelog.md`'s "Confirmed run" section for the specific next fix
-this points to.
+**Main failure mode still open (baseline only):** case-001 (EC2 CPU Spike
+— sustained 95% CPU, 5x latency increase) is misclassified as `medium`
+severity instead of `high` by the baseline on the current run. The agent
+gets this case right, but per `docs/changelog.md` that specific outcome
+isn't a confirmed, reproducible fix — no code change explains it, so it's
+flagged as an unreproduced observation rather than something to rely on.
+The underlying issue for the baseline (and potentially the agent, on a
+different run) is a prompt/rubric calibration problem rather than a
+retrieval-coverage problem — the matching knowledge base entry exists,
+but isn't consistently trusted assertively enough by the verify step when
+its `typical_severity` and the incident's own symptoms line up closely.
+See `docs/changelog.md`'s final section for the specific next fix this
+points to.
 
 **Hot take:** the most useful debugging signal in this project wasn't any
 single accuracy number — it was noticing that two consecutive "the agent
