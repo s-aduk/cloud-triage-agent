@@ -1,4 +1,4 @@
-import knowledgeBaseData from '../../../../data/knowledge-base.json';
+import knowledgeBaseData from '../../data/knowledge-base.json';
 
 // Types for our triage system
 export interface TriageInput {

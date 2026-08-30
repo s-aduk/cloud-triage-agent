@@ -31,10 +31,11 @@ cloud-triage-agent/
 ├── template.yaml                 # AWS SAM template
 ├── README.md                     # This file
 ├── data/                         # Synthetic data
-│   ├── evaluation-cases.json     # Test cases for evaluation
-│   └── knowledge-base.json       # Knowledge base for agent retrieval
+│   └── evaluation-cases.json     # Test cases for evaluation
 ├── services/
 │   └── triage-api/               # Lambda backend
+│       ├── data/
+│       │   └── knowledge-base.json  # Knowledge base for agent retrieval (must live inside CodeUri for esbuild bundling — see docs/changelog.md)
 │       └── src/                  # Source code
 │           ├── handlers/         # Lambda handlers (baseline.ts, agent.ts)
 │           └── services/         # Shared triage logic
@@ -182,7 +183,7 @@ The frontend is in `apps/web/`:
 
 ### Data
 - `data/evaluation-cases.json` - 10+ synthetic test cases
-- `data/knowledge-base.json` - Knowledge base for agent retrieval, with a canonical `incident_type`/`typical_severity` per entry used to ground the agent's verify step (see `docs/changelog.md`)
+- `services/triage-api/data/knowledge-base.json` - Knowledge base for agent retrieval, with a canonical `incident_type`/`typical_severity` per entry used to ground the agent's verify step (see `docs/changelog.md`). Lives inside the Lambda's `CodeUri`, not the repo-root `data/` directory, because `esbuild` needs to resolve and inline it at build time — see `docs/changelog.md` for the `sam build` failure this fixes.
 
 ## Measured Improvement
 

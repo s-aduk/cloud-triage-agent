@@ -151,6 +151,10 @@ in `template.yaml` (see git history for the previous version).
 
 ### Build the Application
 
+Requires Step 2's `npm install` in `services/triage-api` to have already
+run. Note that this local install isn't actually what `sam build` uses —
+see Troubleshooting #1b if you hit `Cannot find esbuild` anyway.
+
 ```bash
 sam build
 ```
@@ -266,6 +270,16 @@ You should see:
    
    - Ensure your IAM user/role has permissions for CloudFormation, Lambda, API Gateway, etc.
    - Consider using administrator permissions for initial deployment (not recommended for production)
+
+1b. **`sam build` fails with `Esbuild Failed: Cannot find esbuild. esbuild must be installed on the host machine...` — even right after `npm install` in `services/triage-api`**
+
+   - This is a known AWS SAM CLI quirk with the `esbuild` build method, not a project misconfiguration (see [aws/aws-sam-cli#4183](https://github.com/aws/aws-sam-cli/issues/4183)). `sam build`'s log shows the real cause if you look closely: `NodejsNpmEsbuildBuilder:CopySource` then `NodejsNpmEsbuildBuilder:NpmInstall` — SAM copies `services/triage-api` into its own scratch build directory and runs **its own separate `npm install` there**, which appears to omit `devDependencies` (reasonable for a deployed Lambda artifact — dev tooling shouldn't ship — except esbuild is also needed mid-build, before that split matters). If `esbuild` is listed under `devDependencies`, SAM's internal install silently skips it, so the bundler that step is about to run can't find its own binary. Your local `npm install` succeeding is irrelevant here — it populates your own top-level `node_modules`, not the copy SAM builds from.
+   - **Fix (already applied in this repo):** `esbuild` is listed in `services/triage-api/package.json`'s `dependencies`, not `devDependencies`. If you've hand-edited that file or regenerated the lockfile and hit this again, confirm with `npm install --omit=dev --prefix services/triage-api && ls services/triage-api/node_modules/.bin/esbuild` — if that file doesn't exist, `esbuild` has drifted back into `devDependencies` (or the lockfile still has a stale `dev: true` flag on it — delete `package-lock.json` and `node_modules`, then `npm install` again to regenerate both consistently).
+   - This doesn't bloat the deployed Lambda: `esbuild` itself is a build-time tool that bundles your code into the artifact SAM ships — it never appears in the final `dist`/bundle output, regardless of which `package.json` section it's listed under.
+
+1c. **`sam build` gets past the esbuild step but fails with `Could not resolve "../../../../data/knowledge-base.json"` (or a similar relative path into a repo-root `data/` directory)**
+
+   - Root cause, if you've moved or re-added a data file: SAM's build only copies each function's `CodeUri` (`services/triage-api/`) into its scratch build directory — nothing outside it exists for esbuild to bundle. `knowledge-base.json` deliberately lives at `services/triage-api/data/knowledge-base.json`, inside `CodeUri`, for exactly this reason (see `docs/changelog.md`). If this error reappears, something has re-imported a file from outside `CodeUri` — check what `triageService.ts` (or any new code) is importing and make sure any file it needs at runtime is physically inside `services/triage-api/`, not the repo-root `data/` directory (which is fine for `evaluation-cases.json`, since only local eval scripts read that one, not deployed Lambda code).
 
 2. **Frontend cannot connect to API**
    

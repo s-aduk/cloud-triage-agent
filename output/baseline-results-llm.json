@@ -21,13 +21,13 @@
     "output": {
       "incidentType": "performance",
       "severity": "medium",
-      "probableCause": "The EC2 instance is experiencing high CPU utilization leading to increased application response times.",
+      "probableCause": "The EC2 instance is experiencing high CPU utilization leading to increased application latency.",
       "evidence": [
         "EC2 instance i-0a1b2c3d4e5f6g7h8 showing 95% CPU utilization for 15 minutes",
         "Application response times increased from 200ms to 2s",
         "No recent deployments"
       ],
-      "nextAction": "Investigate process-level CPU utilization on the instance using top or similar monitoring tools to identify the resource-heavy process.",
+      "nextAction": "Inspect active processes and resource consumption on the EC2 instance using top or similar monitoring tools to identify the heavy workload.",
       "confidence": 0.9
     }
   },
@@ -53,13 +53,13 @@
     "output": {
       "incidentType": "security",
       "severity": "critical",
-      "probableCause": "An S3 bucket containing sensitive customer PII has been misconfigured to allow public access.",
+      "probableCause": "An S3 bucket containing customer PII data has been misconfigured to allow public access, presenting an active data exposure risk.",
       "evidence": [
         "AWS Config rule flagged S3 bucket 'company-backups-2024' as publicly accessible",
         "Bucket contains customer PII data"
       ],
-      "nextAction": "Immediately remove public access from the S3 bucket and review bucket policies, ACLs, and access logs to determine if data was accessed.",
-      "confidence": 0.95
+      "nextAction": "Immediately apply a bucket policy and block public access settings on 'company-backups-2024' to secure the PII data, then investigate CloudTrail logs to check if the data has been accessed.",
+      "confidence": 0.99
     }
   },
   {
@@ -84,12 +84,12 @@
     "output": {
       "incidentType": "resource-exhaustion",
       "severity": "high",
-      "probableCause": "The RDS PostgreSQL instance has run out of available database connections, causing application errors and replica lag.",
+      "probableCause": "The RDS PostgreSQL primary instance has exhausted its available database connections, leading to application errors.",
       "evidence": [
         "RDS PostgreSQL instance db-primary showing 98% connection usage",
         "Application errors: 'too many connections'"
       ],
-      "nextAction": "Identify and terminate leaking or long-running database connections, and scale up max_connections or the instance size if necessary.",
+      "nextAction": "Identify and terminate idle or runaway database sessions on the RDS primary instance and consider scaling up max_connections or connection pooling.",
       "confidence": 0.95
     }
   },
@@ -115,13 +115,13 @@
     "output": {
       "incidentType": "resource-exhaustion",
       "severity": "high",
-      "probableCause": "The Lambda function process-orders is experiencing concurrency exhaustion at its limit of 1000, leading to 429 errors and significantly increased duration.",
+      "probableCause": "The Lambda function has hit its maximum concurrent execution limit of 1000, causing throttling and increased duration.",
       "evidence": [
         "Lambda function process-orders showing 429 errors",
         "Concurrent executions at limit of 1000",
         "Duration increased from 1s to 8s"
       ],
-      "nextAction": "Review current concurrent execution limits for the process-orders Lambda function and investigate upstream invocation sources to check for traffic spikes or potential deadlocks.",
+      "nextAction": "Check the invocation rate and duration of the process-orders Lambda function, and request a concurrency limit increase if the load is legitimate or investigate upstream triggers causing excessive invocations.",
       "confidence": 0.95
     }
   },
@@ -147,13 +147,13 @@
     "output": {
       "incidentType": "timeout",
       "severity": "high",
-      "probableCause": "The integration Lambda function is timing out after 10 seconds, causing the API Gateway to return 504 Gateway Timeout errors and driving p95 latency up to 12 seconds.",
+      "probableCause": "The integration Lambda function is timing out after 10 seconds, causing API Gateway to return 504 errors and driving the p95 latency up to 12 seconds.",
       "evidence": [
         "API Gateway showing 504 errors",
         "latency p95 increased from 300ms to 12s",
         "Integration Lambda timing out after 10s"
       ],
-      "nextAction": "Investigate the integration Lambda function logs in CloudWatch to identify the cause of the execution delays and timeouts.",
+      "nextAction": "Inspect the CloudWatch logs and execution metrics for the integration Lambda function to identify the cause of the downstream delays or timeouts.",
       "confidence": 0.95
     }
   },
@@ -179,12 +179,12 @@
     "output": {
       "incidentType": "deployment-issue",
       "severity": "medium",
-      "probableCause": "A recent deployment to the ECS service web-frontend introduced a regression that increased the error rate to 5%.",
+      "probableCause": "The recent deployment to the ECS service web-frontend introduced a regression that increased the error rate to 5%.",
       "evidence": [
         "Deploy finished 10 minutes ago to ECS service web-frontend",
         "Error rate increased from 0.1% to 5%"
       ],
-      "nextAction": "Review the recent changes in the latest deployment and prepare to roll back the ECS service if the error rate continues to impact users.",
+      "nextAction": "Review recent code changes and consider rolling back the ECS service deployment if errors continue to impact users.",
       "confidence": 0.95
     }
   },
@@ -210,13 +210,13 @@
     "output": {
       "incidentType": "resource-exhaustion",
       "severity": "high",
-      "probableCause": "The Glue ETL job ran out of memory while processing an increasing volume of S3 data over the past 3 days.",
+      "probableCause": "The AWS Glue ETL job failed due to an OutOfMemoryError while processing an increasing volume of S3 data.",
       "evidence": [
         "Glue job etl-nightly failed with OutOfMemoryError",
         "Processing 2TB of S3 data",
         "Job history shows gradually increasing duration over past 3 days"
       ],
-      "nextAction": "Review the Glue job worker configuration, increase worker size or number of workers, and check for memory leaks or inefficient data shuffling in the ETL script.",
+      "nextAction": "Review memory allocation and executor configurations for the Glue job, or optimize the data partitioning strategy to prevent memory exhaustion.",
       "confidence": 0.95
     }
   },
@@ -247,7 +247,7 @@
         "VPC flow shows REJECT traffic from app-subnet to db-subnet on port 5432",
         "Applications losing DB connectivity intermittently"
       ],
-      "nextAction": "Inspect network ACLs, route tables, and firewall rules between the app-subnet and db-subnet to identify the source of the intermittent drops.",
+      "nextAction": "Inspect NACLs, route tables, and firewall rules between the app-subnet and db-subnet to identify what is blocking port 5432.",
       "confidence": 0.95
     }
   },
@@ -273,13 +273,13 @@
     "output": {
       "incidentType": "certificate",
       "severity": "critical",
-      "probableCause": "The SSL certificate for api.example.com expired 2 hours ago and was not automatically rotated via ACM, causing all client TLS handshakes to fail.",
+      "probableCause": "The SSL certificate for api.example.com expired and was not automatically rotated by ACM, causing 100% TLS handshake failures for clients.",
       "evidence": [
         "Load balancer SSL certificate for api.example.com expired 2 hours ago",
         "Clients getting SSL handshake failures",
         "Certificate not rotated via ACM"
       ],
-      "nextAction": "Immediately issue or renew the SSL certificate via ACM and attach it to the load balancer.",
+      "nextAction": "Immediately issue or import a valid SSL certificate into ACM and attach it to the load balancer for api.example.com.",
       "confidence": 1
     }
   },
@@ -305,13 +305,13 @@
     "output": {
       "incidentType": "cost-anomaly",
       "severity": "medium",
-      "probableCause": "Lambda execution duration increased significantly despite stable invocation volume, leading to higher compute costs.",
+      "probableCause": "Lambda execution duration increased significantly while invocation count remained constant, driving up total compute costs without affecting traffic.",
       "evidence": [
         "AWS Cost Explorer shows Lambda costs increased 300% day-over-day",
         "No traffic increase observed",
         "Same number of invocations but longer duration"
       ],
-      "nextAction": "Inspect AWS CloudWatch logs and X-Ray traces for the Lambda functions to identify which code path or dependency is causing the increased execution time.",
+      "nextAction": "Inspect Lambda CloudWatch metrics to identify which functions experienced increased execution duration and review recent code deployments or dependency updates.",
       "confidence": 0.95
     }
   }

@@ -747,3 +747,87 @@ improvement is confirmed-mechanism versus observed-but-unexplained.
 identical rule-based 50%/70% numbers — none of this session's verification
 work altered rule-based behavior. `output/score-llm.json` confirms
 `"complete": true` for both workflows.
+
+## Fix: `sam build` failing with `Cannot find esbuild` even after `npm install`
+
+Reported after handing off a build that passed every check I could run
+locally (`tsc`, unit tests, `eval:local`) but had never actually been
+through `sam build` — a real gap, since none of this project's CI-equivalent
+checks touch the deploy path at all.
+
+**What looked like the cause, and wasn't:** my first guess was that `npm
+install` in `services/triage-api` had simply been skipped. It hadn't — the
+report showed it run successfully, then `sam build` failing anyway with
+the identical error.
+
+**Actual cause:** `sam build`'s log shows two separate install-adjacent
+steps — `NodejsNpmEsbuildBuilder:CopySource` then
+`NodejsNpmEsbuildBuilder:NpmInstall`. SAM copies the function's `CodeUri`
+into its own scratch build directory and runs **its own independent `npm
+install` there**, which omits `devDependencies` — correct for what
+actually ships in a deployed Lambda, except `esbuild` was listed under
+`devDependencies` and is also needed *during* that same build step, before
+the dev/prod split should matter. A local `npm install` in the source tree
+is irrelevant to this — it never touches SAM's scratch copy. This is a
+known AWS SAM CLI behavior with the `esbuild` build method, not a bug in
+this project's template or scripts (see
+[aws/aws-sam-cli#4183](https://github.com/aws/aws-sam-cli/issues/4183)).
+
+**Fix:** moved `esbuild` from `devDependencies` to `dependencies` in
+`services/triage-api/package.json`, and regenerated `package-lock.json`
+(the old lockfile had a `"dev": true` flag baked onto esbuild's entry that
+a package.json edit alone wouldn't have cleared).
+
+**Verified, not just reasoned about:** simulated SAM's internal
+production-only install directly (`npm install --omit=dev`) against both
+the old and new `package.json`/lockfile pairs in isolated scratch
+directories. Old placement: `node_modules/.bin/esbuild` does not exist
+after the install — only a stray platform-specific `@esbuild/*`
+sub-package survives, confirming the exact failure mode reported. New
+placement: `node_modules/.bin/esbuild` exists.
+
+**This fix alone was not sufficient — a real `sam build` surfaced a
+second, independent bug immediately after.** With `esbuild` resolvable,
+the build got further and failed differently: `Could not resolve
+"../../../../data/knowledge-base.json"` from `triageService.ts`. Root
+cause: `services/triage-api/src/services/triageService.ts` statically
+imports the knowledge base from `data/knowledge-base.json` at the repo
+root — four directories above `services/triage-api/`, which is the
+Lambda's `CodeUri`. SAM's build only copies `CodeUri` into its scratch
+build directory (`NodejsNpmEsbuildBuilder:CopySource`); anything outside
+it, including the entire root-level `data/` directory, simply isn't there
+for esbuild to bundle. This had never been caught because every other
+consumer of the knowledge base (`eval:local`, `eval:llm`, the unit tests)
+runs from the repo root with the full tree present — only the actual
+Lambda bundling step, scoped strictly to `CodeUri`, would ever hit this.
+
+**Fix:** relocated `knowledge-base.json` to
+`services/triage-api/data/knowledge-base.json` — inside the Lambda's
+`CodeUri` — and updated the import in `triageService.ts` accordingly
+(`../../data/knowledge-base.json`, relative to `src/services/`). Left
+`evaluation-cases.json` at the repo-root `data/` directory unchanged,
+since nothing in the deployed Lambda code imports it — only local eval
+scripts read it, and they already resolve it correctly relative to `eval/`
+regardless of `CodeUri`.
+
+**Verified with the real tool, not just an inference from the two bugs
+above:** installed `aws-sam-cli` and ran an actual `sam build` (not a
+simulation) after both fixes. Result: `Build Succeeded` for both
+`BaselineFunction` and `AgentFunction`. Additionally confirmed the
+knowledge base is genuinely inlined into the deployed artifact — not just
+silently dropped — by grepping the built `AgentFunction` bundle for a
+distinctive KB string (`"SSL/TLS Certificate Expiry"`), which is present
+in the bundled output. `sam validate --lint` also passes. `npm run
+eval:local` still reproduces the identical 50%/70% rule-based numbers
+after the relocation, and `tsc`/the 4 unit tests are unaffected.
+
+**Hot take:** every check this project runs locally — build, unit tests,
+both eval scripts — exercises the same npm install (devDependencies
+included) and the same full repo tree, so this class of bug had zero
+chance of surfacing before someone actually ran `sam build`. "It builds
+and tests pass" and "it deploys" are different claims, and a project that
+never runs the second one has an untested path by construction, not by
+bad luck — and it can hide more than one bug at once, as it did here:
+fixing the reported error revealed a second, unrelated one directly
+behind it. `sam validate` and a real `sam build` belong somewhere in this
+project's own pre-handoff checklist, not just `tsc`/`jest`/`eval:local`.
