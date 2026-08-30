@@ -71,12 +71,14 @@ cloud-triage-agent/
 ## Setup and Deployment
 
 ### 1. Clone the repository
+
 ```bash
-git clone <repository-url>
+git clone https://github.com/s-aduk/cloud-triage-agent.git
 cd cloud-triage-agent
 ```
 
 ### 2. Install dependencies
+
 ```bash
 # Install frontend dependencies
 cd apps/web
@@ -90,6 +92,7 @@ cd ../..
 ```
 
 ### 3. Build and deploy with AWS SAM
+
 ```bash
 # Build the application
 sam build
@@ -99,6 +102,7 @@ sam deploy --guided
 ```
 
 ### 4. Configure frontend
+
 After deployment, note the endpoint URLs from the stack outputs (`TriageApiBaselineUrl` and `TriageApiAgentUrl`). Then:
 
 ```bash
@@ -107,6 +111,7 @@ NEXT_PUBLIC_API_URL=<your-api-url-from-sam-deploy-output>
 ```
 
 ### 5. Run the frontend
+
 ```bash
 cd apps/web
 npm run dev
@@ -115,6 +120,7 @@ npm run dev
 The frontend will be available at http://localhost:3000
 
 ## Evaluation
+
 Primary metric: correct triage outcome rate (incident type and severity).
 
 **Rule-based reference comparison — free, no AWS credentials needed:**
@@ -164,7 +170,9 @@ a real capture vs. the current illustrative example (mocked, pending a real
 ## Development
 
 ### Backend (Lambda)
+
 The backend is located in `services/triage-api/src/`.
+
 - `handlers/baseline.ts` - Deployed handler (`BaselineHandler`, Gemini-backed) + rule-based reference (`BaselineHandlerRuleBased`, used by `eval:local` only)
 - `handlers/agent.ts` - Deployed handler (`AgentHandler`, Gemini-backed) + rule-based reference (`AgentHandlerRuleBased`, used by `eval:local` only)
 - `services/geminiClient.ts` - Gemini structured-output wrapper (active provider); forces JSON via `responseMimeType`/`responseSchema`, never free text to parse
@@ -176,12 +184,15 @@ The backend is located in `services/triage-api/src/`.
 Run these with `npm run test:api` from the repo root (no API key needed — the LLM client is mocked).
 
 ### Frontend (Next.js)
+
 The frontend is in `apps/web/`:
+
 - `src/app/page.tsx` - Main page with triage form
 - `src/components/TriageForm.tsx` - Input form component
 - `src/components/TriageResult.tsx` - Results display component
 
 ### Data
+
 - `data/evaluation-cases.json` - 10+ synthetic test cases
 - `services/triage-api/data/knowledge-base.json` - Knowledge base for agent retrieval, with a canonical `incident_type`/`typical_severity` per entry used to ground the agent's verify step (see `docs/changelog.md`). Lives inside the Lambda's `CodeUri`, not the repo-root `data/` directory, because `esbuild` needs to resolve and inline it at build time — see `docs/changelog.md` for the `sam build` failure this fixes.
 
@@ -192,10 +203,10 @@ Full case-by-case evidence and the iteration history are in
 non-illustrative), complete (`"complete": true`) `npm run eval:llm` run
 against `gemini-3.5-flash-lite`:
 
-| Metric | Simple baseline | Agent | Change |
-|---|---|---|---|
-| Correct triage (type + severity), rule-based (`eval:local`) | 5/10 (50%) | 7/10 (70%) | +2 cases |
-| Correct triage (type + severity), Gemini-backed (`eval:llm`) | 8/10 (80%) | 10/10 (100%) | +2 cases |
+| Metric                                                       | Simple baseline | Agent        | Change   |
+| ------------------------------------------------------------ | --------------- | ------------ | -------- |
+| Correct triage (type + severity), rule-based (`eval:local`)  | 5/10 (50%)      | 7/10 (70%)   | +2 cases |
+| Correct triage (type + severity), Gemini-backed (`eval:llm`) | 8/10 (80%)      | 10/10 (100%) | +2 cases |
 
 The agent's clearest confirmed win over the baseline (case-004, Lambda
 Throttling) is a genuine case of verification catching a classification
