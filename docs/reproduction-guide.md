@@ -28,15 +28,24 @@ credentials, no cost. Full results are written to `output/baseline-results.json`
 `output/agent-results.json`, and `output/score.json`.
 
 To reproduce the same comparison against the real, deployed LLM logic
-(Bedrock) instead of the rule-based reference — no API Gateway/deployment
-needed, just AWS credentials with Bedrock access:
+(Google Gemini) instead of the rule-based reference — no API Gateway/deployment
+needed, just a free Gemini API key:
 
 ```bash
+export GEMINI_API_KEY=<your-key>   # free, no credit card: https://aistudio.google.com/apikey
 npm run eval:llm
 ```
 
-See the "Bedrock setup" step below for the model-access prerequisite; this
-makes ~30 real model calls and incurs a small cost.
+This makes ~30 real model calls, using `gemini-2.5-flash-lite` by default
+(not Flash — Flash's free daily quota was cut sharply in December 2025;
+this project hit a 20-requests/day cap directly on one account. Flash-Lite
+is generally more generous, but some accounts still see a low flat daily
+cap regardless of model — this project measured ~20/day on one account
+even for Flash-Lite. See `docs/changelog.md` for the full debugging story).
+If your daily quota doesn't cover all ~30 calls in one sitting, that's
+fine — `eval/run-llm.js` is resumable: re-run the same command once your
+quota resets and it will only retry cases that previously failed, not the
+ones that already succeeded. See "Step 3b: Get a Gemini API key" below.
 
 The steps below cover the full AWS deployment (SAM/Lambda/API Gateway) plus
 the frontend, for anyone who wants to exercise the deployed API or the UI
@@ -116,19 +125,26 @@ aws configure
 # Enter your AWS Access Key ID, Secret Access Key, region, and output format
 ```
 
-## Step 3b: Enable Bedrock model access
+## Step 3b: Get a Gemini API key
 
-Both workflows call Bedrock, so this step is required even for `npm run eval:llm` (not just for deploying):
+Both workflows call Google Gemini, so this step is required even for
+`npm run eval:llm` (not just for deploying):
 
-1. In the AWS Console, go to **Bedrock -> Model access** in the region you plan to use.
-2. Request/enable access to the Anthropic Claude model referenced by `template.yaml`'s `BedrockModelId` parameter (default: `us.anthropic.claude-haiku-4-5-20251001-v1:0`).
-3. Confirm the inference profile ID is valid for your account/region:
+1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and sign in with any Google account.
+2. Click **Create API key** — no credit card required, no separate approval form.
+3. Set it as an environment variable:
    ```bash
-   aws bedrock list-inference-profiles --region <your-region>
+   export GEMINI_API_KEY=<your-key>
    ```
-   If it's not listed, or you're in a different region, update `BedrockModelId` in `template.yaml` (for deployment) or set the `BEDROCK_MODEL_ID` environment variable (for `npm run eval:llm`) to a valid inference profile ID for your account.
 
-Without this step, calls fail with `AccessDeniedException` even with correct IAM permissions — this is a Bedrock console setting, not an IAM policy.
+This project previously used Amazon Bedrock — see `docs/changelog.md` for
+why it moved to Gemini (account-level AWS restrictions on a free-tier
+account blocked model access, then a token-per-day quota, then most Bedrock
+service quotas simply weren't provisioned for the account at all). Bedrock
+support is still in the codebase (`services/triage-api/src/services/bedrockClient.ts`)
+if you have working Bedrock access and want to switch back — swap the
+import in `triageServiceLLM.ts` and restore the Bedrock IAM policy/parameter
+in `template.yaml` (see git history for the previous version).
 
 ## Step 4: Build and Deploy
 
@@ -149,9 +165,11 @@ You will be prompted for:
 1. **Stack Name**: Enter a unique name (e.g., cloud-triage-agent-dev)
 2. **AWS Region**: Select your preferred region (e.g., us-east-1)
 3. **Parameter Environment**: Enter `dev` (or your preferred environment)
-4. **Confirm changes before deploy**: Enter `Y`
-5. **Allow SAM CLI IAM role creation**: Enter `Y`
-6. **Save arguments to samconfig.toml**: Enter `Y`
+4. **Parameter GeminiApiKey**: Paste the key from Step 3b
+5. **Parameter GeminiModel**: Press enter to accept the default (`gemini-2.5-flash-lite`)
+6. **Confirm changes before deploy**: Enter `Y`
+7. **Allow SAM CLI IAM role creation**: Enter `Y`
+8. **Save arguments to samconfig.toml**: Enter `Y` (note: this writes your API key into `samconfig.toml` in plain text — don't commit that file; for anything beyond local testing, use Secrets Manager or SSM Parameter Store instead of a plain CloudFormation parameter)
 
 After deployment completes, note the output values, particularly:
 
@@ -265,17 +283,26 @@ You should see:
    - Run `npm install` in the appropriate directories
    - Ensure you're in the correct directory when running commands
 
-5. **`AccessDeniedException` calling Bedrock**
+5. **`GEMINI_API_KEY is not set` error**
 
-   - Model access has to be enabled per-region in the Bedrock console (Model access -> Anthropic) — this is separate from IAM permissions, and the IAM policy in `template.yaml` alone won't fix it. See Step 3b above.
+   - Set the environment variable before running (`export GEMINI_API_KEY=<your-key>`) — see Step 3b. For a deployed Lambda, this needs to be set as the `GeminiApiKey` SAM parameter at deploy time, not just in your local shell.
 
-6. **`ValidationException: ... with on-demand throughput isn't supported`**
+6. **Gemini call fails with a 429 / rate limit error**
 
-   - You're using a bare model ID instead of an inference profile ID. Current-generation Claude models on Bedrock require a region-prefixed inference profile ID (e.g. `us.anthropic....`), not the bare `anthropic....` model ID. Check `BedrockModelId` in `template.yaml` / `BEDROCK_MODEL_ID` env var.
+   - **Per-minute** (recovers in under a minute): `geminiClient.ts` retries these automatically with backoff. If you still see one bubble up, you may be sharing quota with other usage on the same key — wait a minute and retry.
+   - **Per-day** (`"quotaId":"...PerDay..."` in the error, or the error message says "Gemini daily quota exhausted"): this does not recover until midnight Pacific time, and `geminiClient.ts` deliberately does not retry it. Some free-tier accounts have a much lower daily cap than Google's documented default (this project measured a flat ~20 requests/day on one account, regardless of model) — if a full `eval:llm` run (needs ~30 calls) doesn't fit in your daily quota, that's fine: **`eval/run-llm.js` is resumable.** It skips any case that already has a successful result from a previous run and only spends quota on cases that are missing or previously failed. Just re-run `npm run eval:llm` again once your quota resets, as many times as it takes for both workflows to report `complete: true` in `output/score-llm.json`. Use `FORCE_RERUN=1 npm run eval:llm` if you actually want to ignore previous results and start over.
 
-7. **Bedrock call succeeds but the handler returns a 502 with "Bedrock did not return a tool_use block"**
+7. **Handler returns a 502 with a generic `400 INVALID_ARGUMENT`, no further detail**
 
-   - Usually means the configured model doesn't support forced tool-use the way `bedrockClient.ts` expects it to, or the inference profile ID is valid but points to the wrong region for your account. Try the request with the AWS CLI (`aws bedrock-runtime converse ...`) directly to isolate whether it's the model/region or the application code.
+   - Most likely cause: an incompatible `thinkingConfig` field for the configured model. Gemini 2.5-and-earlier models use `thinkingBudget` (a number); Gemini 3.x models use `thinkingLevel` (a string enum) instead and don't support full thinking-off, so sending the wrong one returns this exact generic error. `geminiClient.ts`'s `buildThinkingConfig()` already picks the right one by model-ID prefix — if you see this, check whether `GEMINI_MODEL` is set to something outside both the `gemini-2.5-*` and `gemini-3*` patterns it detects.
+
+8. **Want to try a different Gemini model (e.g. to dodge an exhausted daily quota on your current one)**
+
+   - Each model tracks its own separate daily quota, so switching models is a legitimate way to get a fresh budget for the day: `GEMINI_MODEL=gemini-3.5-flash-lite npm run eval:llm` (or any other valid Gemini model ID). The thinking-config handling above applies automatically regardless of which generation you pick.
+
+9. **Handler returns a 502 with "Gemini returned no text"**
+
+   - Usually means `maxOutputTokens` was too low for the schema, or the response was blocked by a safety filter. Check the Lambda/console logs for the `finishReason` in the error message for which one it is.
 
 ### Logs and Debugging
 
@@ -298,4 +325,4 @@ This will remove all AWS resources created by the SAM template.
 - This project uses synthetic data only - no real AWS resources or data are accessed
 - The knowledge base and evaluation cases are stored as JSON files for simplicity
 - In a production implementation, you would likely use DynamoDB or S3 for the knowledge base
-- Both the baseline and agent workflows call Amazon Bedrock (see `services/triage-api/src/services/bedrockClient.ts` and `triageServiceLLM.ts`). A rule-based reference implementation of both (`triageService.ts`) is kept for `npm run eval:local`, which needs no AWS credentials — see `docs/changelog.md` for why that comparison was worth keeping.
+- Both the baseline and agent workflows call Google Gemini (see `services/triage-api/src/services/geminiClient.ts` and `triageServiceLLM.ts`). A rule-based reference implementation of both (`triageService.ts`) is kept for `npm run eval:local`, which needs no API key at all — see `docs/changelog.md` for why that comparison was worth keeping, and for why this project moved off Bedrock to Gemini.

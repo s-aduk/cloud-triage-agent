@@ -1,6 +1,6 @@
 # ILLUSTRATIVE — Baseline trajectory — Cost Anomaly (case-010)
 
-> **This is a mocked example, not a real Bedrock run.** It demonstrates the trajectory format and the classify -> retrieve -> verify -> override mechanism using scripted responses, generated the same way as `services/triage-api/src/services/__tests__/triageServiceLLM.test.ts`. Real trajectories (from actual Bedrock calls) should replace this file once Bedrock account access is provisioned — run `npm run trajectories`. See docs/changelog.md for why this project holds a hard line against presenting unverified numbers as real ones; the same standard applies here, hence this banner.
+> **This is a mocked example, not a real Gemini run.** It demonstrates the trajectory format and the classify -> retrieve -> verify -> override mechanism using scripted responses, generated the same way as `services/triage-api/src/services/__tests__/triageServiceLLM.test.ts`. Real trajectories (from actual Gemini calls) should replace this file once a real GEMINI_API_KEY is used — run `npm run trajectories`. See docs/changelog.md for why this project holds a hard line against presenting unverified numbers as real ones; the same standard applies here, hence this banner.
 
 **Input:**
 

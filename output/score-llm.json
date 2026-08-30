@@ -1,0 +1,439 @@
+{
+  "baseline": {
+    "correct": 8,
+    "total": 10,
+    "accuracy": "80.00%",
+    "complete": true
+  },
+  "agent": {
+    "correct": 10,
+    "total": 10,
+    "accuracy": "100.00%",
+    "complete": true
+  },
+  "improvement": {
+    "correct": 2,
+    "accuracyDifference": "20.00%"
+  },
+  "generatedAt": "2026-08-30T02:00:03.093Z",
+  "details": [
+    {
+      "caseId": "case-001",
+      "title": "EC2 CPU Spike",
+      "expected": {
+        "incidentType": "performance",
+        "severity": "high",
+        "probableCause": "sudden traffic increase or infinite loop in application code",
+        "evidence": [
+          "CloudWatch CPU alarm",
+          "95% utilization for 15min",
+          "response time increase 5x"
+        ],
+        "nextAction": "scale EC2 instance or investigate application code for infinite loops",
+        "confidence": 0.85
+      },
+      "baselineOutput": {
+        "incidentType": "performance",
+        "severity": "medium",
+        "probableCause": "The EC2 instance is experiencing high CPU utilization leading to increased application response times.",
+        "evidence": [
+          "EC2 instance i-0a1b2c3d4e5f6g7h8 showing 95% CPU utilization for 15 minutes",
+          "Application response times increased from 200ms to 2s",
+          "No recent deployments"
+        ],
+        "nextAction": "Investigate process-level CPU utilization on the instance using top or similar monitoring tools to identify the resource-heavy process.",
+        "confidence": 0.9
+      },
+      "baselineCorrect": false,
+      "agentOutput": {
+        "incidentType": "performance",
+        "severity": "high",
+        "probableCause": "An EC2 instance is experiencing high CPU utilization resulting in severe application response time degradation.",
+        "evidence": [
+          "EC2 instance i-0a1b2c3d4e5f6g7h8 showing 95% CPU utilization for 15 minutes",
+          "Application response times increased from 200ms to 2s",
+          "Canonical categorization for this pattern: incidentType=\"performance\", typicalSeverity=\"high\""
+        ],
+        "nextAction": "Investigate application logs and process metrics to identify the specific process or thread consuming high CPU, and consider scaling the instance or optimizing the workload.",
+        "confidence": 0.95
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-002",
+      "title": "S3 Bucket Public Access",
+      "expected": {
+        "incidentType": "security",
+        "severity": "critical",
+        "probableCause": "misconfigured S3 bucket policy or ACL allowing public read access",
+        "evidence": [
+          "AWS Config public access flag",
+          "bucket contains PII",
+          "no recent IAM changes"
+        ],
+        "nextAction": "immediately block public access, audit bucket contents, enable S3 block public settings",
+        "confidence": 0.95
+      },
+      "baselineOutput": {
+        "incidentType": "security",
+        "severity": "critical",
+        "probableCause": "An S3 bucket containing sensitive customer PII has been misconfigured to allow public access.",
+        "evidence": [
+          "AWS Config rule flagged S3 bucket 'company-backups-2024' as publicly accessible",
+          "Bucket contains customer PII data"
+        ],
+        "nextAction": "Immediately remove public access from the S3 bucket and review bucket policies, ACLs, and access logs to determine if data was accessed.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "security",
+        "severity": "critical",
+        "probableCause": "An S3 bucket containing sensitive customer PII has been misconfigured to allow public access.",
+        "evidence": [
+          "AWS Config rule flagged S3 bucket 'company-backups-2024' as publicly accessible",
+          "Bucket contains customer PII data",
+          "KB entry 1 - S3 Public Bucket Exposure"
+        ],
+        "nextAction": "Enable S3 Block Public Access immediately and audit the bucket and ACL policies.",
+        "confidence": 0.98
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-003",
+      "title": "RDS Connection Exhaustion",
+      "expected": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "connection pool misconfiguration or application leak",
+        "evidence": [
+          "98% DB connections used",
+          "application connection errors",
+          "read replica lag"
+        ],
+        "nextAction": "increase max_connections, investigate connection pooling, check for connection leaks",
+        "confidence": 0.9
+      },
+      "baselineOutput": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "The RDS PostgreSQL instance has run out of available database connections, causing application errors and replica lag.",
+        "evidence": [
+          "RDS PostgreSQL instance db-primary showing 98% connection usage",
+          "Application errors: 'too many connections'"
+        ],
+        "nextAction": "Identify and terminate leaking or long-running database connections, and scale up max_connections or the instance size if necessary.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "The RDS PostgreSQL instance has run out of available database connections, causing application errors and read replica lag.",
+        "evidence": [
+          "RDS PostgreSQL instance db-primary showing 98% connection usage",
+          "Application errors: 'too many connections'",
+          "KB entry 1 - Database Connection Exhaustion"
+        ],
+        "nextAction": "Examine active database connections, check for connection leaks in the application, and consider increasing max_connections or scaling up the instance size.",
+        "confidence": 0.98
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-004",
+      "title": "Lambda Throttling",
+      "expected": {
+        "incidentType": "throttling",
+        "severity": "medium",
+        "probableCause": "sudden increase in order processing volume exceeding concurrency limits",
+        "evidence": [
+          "429 errors",
+          "duration 8x increase",
+          "at concurrency limit"
+        ],
+        "nextAction": "increase reserved concurrency, investigate batch size optimization, consider SQS buffering",
+        "confidence": 0.8
+      },
+      "baselineOutput": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "The Lambda function process-orders is experiencing concurrency exhaustion at its limit of 1000, leading to 429 errors and significantly increased duration.",
+        "evidence": [
+          "Lambda function process-orders showing 429 errors",
+          "Concurrent executions at limit of 1000",
+          "Duration increased from 1s to 8s"
+        ],
+        "nextAction": "Review current concurrent execution limits for the process-orders Lambda function and investigate upstream invocation sources to check for traffic spikes or potential deadlocks.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": false,
+      "agentOutput": {
+        "incidentType": "throttling",
+        "severity": "medium",
+        "probableCause": "The Lambda function process-orders is experiencing 429 errors and increased duration because it has reached its concurrent executions limit of 1000.",
+        "evidence": [
+          "Lambda function process-orders showing 429 errors",
+          "Concurrent executions at limit of 1000",
+          "KB entry 1 - Lambda Function Throttling"
+        ],
+        "nextAction": "Review the function duration and concurrency limits, and consider increasing reserved concurrency or implementing buffering with SQS.",
+        "confidence": 0.95
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-005",
+      "title": "API Gateway Latency Spike",
+      "expected": {
+        "incidentType": "timeout",
+        "severity": "high",
+        "probableCause": "backend database slow query or external API delay",
+        "evidence": [
+          "504 errors",
+          "latency 40x increase",
+          "Lambda timeout at 10s"
+        ],
+        "nextAction": "increase Lambda timeout, optimize database queries, add caching layer",
+        "confidence": 0.75
+      },
+      "baselineOutput": {
+        "incidentType": "timeout",
+        "severity": "high",
+        "probableCause": "The integration Lambda function is timing out after 10 seconds, causing the API Gateway to return 504 Gateway Timeout errors and driving p95 latency up to 12 seconds.",
+        "evidence": [
+          "API Gateway showing 504 errors",
+          "latency p95 increased from 300ms to 12s",
+          "Integration Lambda timing out after 10s"
+        ],
+        "nextAction": "Investigate the integration Lambda function logs in CloudWatch to identify the cause of the execution delays and timeouts.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "timeout",
+        "severity": "high",
+        "probableCause": "The integration Lambda function is timing out after 10 seconds, causing API Gateway to return 504 errors and severely degrading the p95 latency.",
+        "evidence": [
+          "API Gateway showing 504 errors",
+          "latency p95 increased from 300ms to 12s",
+          "Integration Lambda timing out after 10s",
+          "Canonical categorization for this pattern: incidentType=\"timeout\", typicalSeverity=\"high\""
+        ],
+        "nextAction": "Investigate the integration Lambda function logs to identify the cause of slow execution or database bottlenecks, and consider optimizing the code or adjusting timeout limits.",
+        "confidence": 0.98
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-006",
+      "title": "Mixed Signals - Deploy and Error",
+      "expected": {
+        "incidentType": "deployment-issue",
+        "severity": "medium",
+        "probableCause": "new version has memory leak or inefficient code path",
+        "evidence": [
+          "recent deploy",
+          "error rate 50x increase",
+          "memory usage up 40%"
+        ],
+        "nextAction": "roll back deployment, investigate memory usage in new code, check logs for exceptions",
+        "confidence": 0.7
+      },
+      "baselineOutput": {
+        "incidentType": "deployment-issue",
+        "severity": "medium",
+        "probableCause": "A recent deployment to the ECS service web-frontend introduced a regression that increased the error rate to 5%.",
+        "evidence": [
+          "Deploy finished 10 minutes ago to ECS service web-frontend",
+          "Error rate increased from 0.1% to 5%"
+        ],
+        "nextAction": "Review the recent changes in the latest deployment and prepare to roll back the ECS service if the error rate continues to impact users.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "deployment-issue",
+        "severity": "medium",
+        "probableCause": "A recent deployment to the ECS web-frontend service introduced a bug or resource leak that increased the error rate to 5% and elevated memory usage.",
+        "evidence": [
+          "Deploy finished 10 minutes ago to ECS service web-frontend",
+          "Error rate increased from 0.1% to 5%",
+          "Memory usage increased from 60% to 85%",
+          "KB entry 1 - Deployment-Related Issues matches symptoms of increased error rate post-deploy and resource usage changes"
+        ],
+        "nextAction": "Investigate the recent deployment changes for potential memory leaks or bugs, and prepare to roll back the deployment if error rates do not stabilize.",
+        "confidence": 0.95
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-007",
+      "title": "Data Pipeline Failure",
+      "expected": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "data volume growth exceeding Glue worker memory capacity",
+        "evidence": [
+          "OutOfMemoryError in Glue logs",
+          "2TB data processing",
+          "duration trend increasing"
+        ],
+        "nextAction": "increase Glue worker type, implement data partitioning, add snapshot isolation",
+        "confidence": 0.85
+      },
+      "baselineOutput": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "The Glue ETL job ran out of memory while processing an increasing volume of S3 data over the past 3 days.",
+        "evidence": [
+          "Glue job etl-nightly failed with OutOfMemoryError",
+          "Processing 2TB of S3 data",
+          "Job history shows gradually increasing duration over past 3 days"
+        ],
+        "nextAction": "Review the Glue job worker configuration, increase worker size or number of workers, and check for memory leaks or inefficient data shuffling in the ETL script.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "resource-exhaustion",
+        "severity": "high",
+        "probableCause": "The nightly ETL Glue job failed due to an OutOfMemoryError while processing an increasing volume of S3 data.",
+        "evidence": [
+          "Glue job etl-nightly failed with OutOfMemoryError",
+          "Processing 2TB of S3 data",
+          "Job history shows gradually increasing duration over past 3 days"
+        ],
+        "nextAction": "Increase worker resources or optimize data processing logic and partitioning for the ETL job.",
+        "confidence": 0.95
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-008",
+      "title": "Network Connectivity Issue",
+      "expected": {
+        "incidentType": "network",
+        "severity": "high",
+        "probableCause": "network ACL or security group rule incorrectly blocking database traffic",
+        "evidence": [
+          "VPC flow REJECT on port 5432",
+          "intermittent DB connectivity",
+          "security group unchanged"
+        ],
+        "nextAction": "check network ACLs, verify security group egress rules, test connectivity with nc command",
+        "confidence": 0.8
+      },
+      "baselineOutput": {
+        "incidentType": "network",
+        "severity": "high",
+        "probableCause": "Intermittent network traffic rejection between the application subnet and database subnet on port 5432.",
+        "evidence": [
+          "VPC flow shows REJECT traffic from app-subnet to db-subnet on port 5432",
+          "Applications losing DB connectivity intermittently"
+        ],
+        "nextAction": "Inspect network ACLs, route tables, and firewall rules between the app-subnet and db-subnet to identify the source of the intermittent drops.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "network",
+        "severity": "high",
+        "probableCause": "Intermittent connectivity loss between app-subnet and db-subnet due to VPC flow REJECT logs on port 5432.",
+        "evidence": [
+          "VPC flow shows REJECT traffic from app-subnet to db-subnet on port 5432",
+          "Applications losing DB connectivity intermittently",
+          "VPC REJECT logs; intermittent service connectivity; timeout errors"
+        ],
+        "nextAction": "Investigate network ACL rules, security group configurations, and route tables between the app and database subnets.",
+        "confidence": 0.95
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-009",
+      "title": "Certificate Expiry",
+      "expected": {
+        "incidentType": "certificate",
+        "severity": "critical",
+        "probableCause": "expired SSL/TLS certificate not renewed automatically",
+        "evidence": [
+          "SSL certificate expired 2hrs ago",
+          "SSL handshake failures",
+          "no ACM auto-renewal"
+        ],
+        "nextAction": "renew certificate in ACM, verify load balancer configuration, set up monitoring for expiry",
+        "confidence": 0.98
+      },
+      "baselineOutput": {
+        "incidentType": "certificate",
+        "severity": "critical",
+        "probableCause": "The SSL certificate for api.example.com expired 2 hours ago and was not automatically rotated via ACM, causing all client TLS handshakes to fail.",
+        "evidence": [
+          "Load balancer SSL certificate for api.example.com expired 2 hours ago",
+          "Clients getting SSL handshake failures",
+          "Certificate not rotated via ACM"
+        ],
+        "nextAction": "Immediately issue or renew the SSL certificate via ACM and attach it to the load balancer.",
+        "confidence": 1
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "certificate",
+        "severity": "critical",
+        "probableCause": "The SSL certificate for api.example.com expired and was not rotated via ACM, causing complete TLS handshake failures for clients.",
+        "evidence": [
+          "Load balancer SSL certificate for api.example.com expired 2 hours ago",
+          "Clients getting SSL handshake failures",
+          "Certificate not rotated via ACM"
+        ],
+        "nextAction": "Immediately renew or replace the expired SSL certificate on the load balancer and update ACM configuration to ensure automated future renewals.",
+        "confidence": 1
+      },
+      "agentCorrect": true
+    },
+    {
+      "caseId": "case-010",
+      "title": "Cost Anomaly",
+      "expected": {
+        "incidentType": "cost-anomaly",
+        "severity": "medium",
+        "probableCause": "infinite loop or inefficient processing in Lambda function increasing duration",
+        "evidence": [
+          "300% cost increase",
+          "same invocation count",
+          "longer duration per invocation"
+        ],
+        "nextAction": "identify high-cost Lambda functions, profile for performance issues, check for infinite loops",
+        "confidence": 0.7
+      },
+      "baselineOutput": {
+        "incidentType": "cost-anomaly",
+        "severity": "medium",
+        "probableCause": "Lambda execution duration increased significantly despite stable invocation volume, leading to higher compute costs.",
+        "evidence": [
+          "AWS Cost Explorer shows Lambda costs increased 300% day-over-day",
+          "No traffic increase observed",
+          "Same number of invocations but longer duration"
+        ],
+        "nextAction": "Inspect AWS CloudWatch logs and X-Ray traces for the Lambda functions to identify which code path or dependency is causing the increased execution time.",
+        "confidence": 0.95
+      },
+      "baselineCorrect": true,
+      "agentOutput": {
+        "incidentType": "cost-anomaly",
+        "severity": "medium",
+        "probableCause": "AWS Cost Explorer shows Lambda costs increased 300% day-over-day due to longer execution durations with the same invocation count.",
+        "evidence": [
+          "AWS Cost Explorer shows Lambda costs increased 300% day-over-day",
+          "No traffic increase observed",
+          "Same number of invocations but longer duration"
+        ],
+        "nextAction": "Inspect Lambda CloudWatch logs and X-Ray traces to identify the root cause of the increased function execution duration and optimize the inefficient code.",
+        "confidence": 0.95
+      },
+      "agentCorrect": true
+    }
+  ]
+}

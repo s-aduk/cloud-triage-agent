@@ -3,107 +3,424 @@
     {
       "id": "kb-001",
       "title": "EC2 High CPU Utilization",
-      "symptoms": ["CPU > 90%", "increased response time", "CloudWatch alarm"],
-      "common_causes": ["sudden traffic spike", "infinite loop", "inefficient algorithm", "missing index"],
-      "investigation_steps": ["check CloudWatch metrics", "review application logs", "check recent deployments", "analyze slow queries"],
-      "resolution_actions": ["scale instance vertically/horizontally", "optimize application code", "add database indexing", "implement caching"],
-      "confidence_factors": ["duration of high CPU", "correlation with traffic patterns", "log error patterns"]
+      "incident_type": "performance",
+      "typical_severity": "high",
+      "symptoms": [
+        "CPU > 90%",
+        "increased response time",
+        "CloudWatch alarm"
+      ],
+      "common_causes": [
+        "sudden traffic spike",
+        "infinite loop",
+        "inefficient algorithm",
+        "missing index"
+      ],
+      "investigation_steps": [
+        "check CloudWatch metrics",
+        "review application logs",
+        "check recent deployments",
+        "analyze slow queries"
+      ],
+      "resolution_actions": [
+        "scale instance vertically/horizontally",
+        "optimize application code",
+        "add database indexing",
+        "implement caching"
+      ],
+      "confidence_factors": [
+        "duration of high CPU",
+        "correlation with traffic patterns",
+        "log error patterns"
+      ]
     },
     {
       "id": "kb-002",
       "title": "S3 Public Bucket Exposure",
-      "symptoms": ["AWS Config public access flag", "unauthorized access attempts", "data leakage reports"],
-      "common_causes": ["bucket policy misconfiguration", "ACL set to public-read", "IAM policy overly permissive"],
-      "investigation_steps": ["review bucket policy and ACL", "check IAM policies", "examine access logs", "test public access"],
-      "resolution_actions": ["block public access immediately", "apply principle of least privilege", "enable S3 Block Public Access", "audit data access"],
-      "confidence_factors": ["presence of PII/data sensitivity", "duration of exposure", "access log analysis"]
+      "incident_type": "security",
+      "typical_severity": "critical",
+      "symptoms": [
+        "AWS Config public access flag",
+        "unauthorized access attempts",
+        "data leakage reports"
+      ],
+      "common_causes": [
+        "bucket policy misconfiguration",
+        "ACL set to public-read",
+        "IAM policy overly permissive"
+      ],
+      "investigation_steps": [
+        "review bucket policy and ACL",
+        "check IAM policies",
+        "examine access logs",
+        "test public access"
+      ],
+      "resolution_actions": [
+        "block public access immediately",
+        "apply principle of least privilege",
+        "enable S3 Block Public Access",
+        "audit data access"
+      ],
+      "confidence_factors": [
+        "presence of PII/data sensitivity",
+        "duration of exposure",
+        "access log analysis"
+      ]
     },
     {
       "id": "kb-003",
       "title": "Database Connection Exhaustion",
-      "symptoms": ["'too many connections' errors", "high connection usage %", "application timeouts"],
-      "common_causes": ["connection pool misconfiguration", "application connection leak", "insufficient max_connections"],
-      "investigation_steps": ["check database connection metrics", "review application connection pooling", "identify long-running queries", "check for uncommitted transactions"],
-      "resolution_actions": ["increase max_connections", "fix connection leaks in application", "optimize connection pool settings", "kill idle connections"],
-      "confidence_factors": ["connection usage trend", "correlation with traffic spikes", "application error patterns"]
+      "incident_type": "resource-exhaustion",
+      "typical_severity": "high",
+      "symptoms": [
+        "'too many connections' errors",
+        "high connection usage %",
+        "application timeouts"
+      ],
+      "common_causes": [
+        "connection pool misconfiguration",
+        "application connection leak",
+        "insufficient max_connections"
+      ],
+      "investigation_steps": [
+        "check database connection metrics",
+        "review application connection pooling",
+        "identify long-running queries",
+        "check for uncommitted transactions"
+      ],
+      "resolution_actions": [
+        "increase max_connections",
+        "fix connection leaks in application",
+        "optimize connection pool settings",
+        "kill idle connections"
+      ],
+      "confidence_factors": [
+        "connection usage trend",
+        "correlation with traffic spikes",
+        "application error patterns"
+      ]
     },
     {
       "id": "kb-004",
       "title": "Lambda Function Throttling",
-      "symptoms": ["429 errors", "increased duration", "concurrent executions at limit"],
-      "common_causes": ["traffic spike exceeding concurrency limits", "long-running executions", "burst traffic patterns"],
-      "investigation_steps": ["check Lambda metrics and errors", "review concurrency settings", "analyze invocation patterns", "check dead-letter queue"],
-      "resolution_actions": ["increase reserved concurrency", "optimize function duration", "implement buffering with SQS/Kinesis", "consider provisioned concurrency"],
-      "confidence_factors": ["duration of throttling", "correlation with traffic patterns", "error rate trends"]
+      "incident_type": "throttling",
+      "typical_severity": "medium",
+      "symptoms": [
+        "429 errors",
+        "increased duration",
+        "concurrent executions at limit"
+      ],
+      "common_causes": [
+        "traffic spike exceeding concurrency limits",
+        "long-running executions",
+        "burst traffic patterns"
+      ],
+      "investigation_steps": [
+        "check Lambda metrics and errors",
+        "review concurrency settings",
+        "analyze invocation patterns",
+        "check dead-letter queue"
+      ],
+      "resolution_actions": [
+        "increase reserved concurrency",
+        "optimize function duration",
+        "implement buffering with SQS/Kinesis",
+        "consider provisioned concurrency"
+      ],
+      "confidence_factors": [
+        "duration of throttling",
+        "correlation with traffic patterns",
+        "error rate trends"
+      ]
     },
     {
       "id": "kb-005",
       "title": "API Gateway Timeout/Latency Issues",
-      "symptoms": ["504 errors", "increased latency", "integration timeouts"],
-      "common_causes": ["backend slow performance", "database slow queries", "external API delays", "inefficient Lambda code"],
-      "investigation_steps": ["check CloudWatch metrics", "trace X-Ray for latency sources", "check backend database performance", "review Lambda logs"],
-      "resolution_actions": ["increase timeout settings", "optimize backend/database performance", "add caching layer", "implement asynchronous processing"],
-      "confidence_factors": ["latency increase magnitude", "correlation with specific endpoints", "timeout patterns"]
+      "incident_type": "timeout",
+      "typical_severity": "high",
+      "symptoms": [
+        "504 errors",
+        "increased latency",
+        "integration timeouts"
+      ],
+      "common_causes": [
+        "backend slow performance",
+        "database slow queries",
+        "external API delays",
+        "inefficient Lambda code"
+      ],
+      "investigation_steps": [
+        "check CloudWatch metrics",
+        "trace X-Ray for latency sources",
+        "check backend database performance",
+        "review Lambda logs"
+      ],
+      "resolution_actions": [
+        "increase timeout settings",
+        "optimize backend/database performance",
+        "add caching layer",
+        "implement asynchronous processing"
+      ],
+      "confidence_factors": [
+        "latency increase magnitude",
+        "correlation with specific endpoints",
+        "timeout patterns"
+      ]
     },
     {
       "id": "kb-006",
       "title": "Deployment-Related Issues",
-      "symptoms": ["increased error rate post-deploy", "resource usage changes", "performance degradation"],
-      "common_causes": ["buggy code release", "configuration drift", "incompatible dependency", "resource leaks in new code"],
-      "investigation_steps": ["compare pre/post-deploy metrics", "review deployment configurations", "check application logs for exceptions", "monitor resource utilization"],
-      "resolution_actions": ["roll back deployment", "hotfix and redeploy", "investigate resource leaks", "implement canary deployments"],
-      "confidence_factors": ["timing correlation with deploy", "error rate increase", "resource usage changes"]
+      "incident_type": "deployment-issue",
+      "typical_severity": "medium",
+      "symptoms": [
+        "increased error rate post-deploy",
+        "resource usage changes",
+        "performance degradation"
+      ],
+      "common_causes": [
+        "buggy code release",
+        "configuration drift",
+        "incompatible dependency",
+        "resource leaks in new code"
+      ],
+      "investigation_steps": [
+        "compare pre/post-deploy metrics",
+        "review deployment configurations",
+        "check application logs for exceptions",
+        "monitor resource utilization"
+      ],
+      "resolution_actions": [
+        "roll back deployment",
+        "hotfix and redeploy",
+        "investigate resource leaks",
+        "implement canary deployments"
+      ],
+      "confidence_factors": [
+        "timing correlation with deploy",
+        "error rate increase",
+        "resource usage changes"
+      ]
     },
     {
       "id": "kb-007",
       "title": "Data Processing Job Failures",
-      "symptoms": ["OutOfMemoryError", "gradually increasing duration", "job failures"],
-      "common_causes": ["data volume growth", "inefficient processing algorithms", "insufficient worker resources", "data skew"],
-      "investigation_steps": ["check job logs for error details", "review data volume trends", "analyze processing algorithms", "check for data partitioning issues"],
-      "resolution_actions": ["increase worker resources", "optimize data processing logic", "implement data partitioning", "add checkpointing"],
-      "confidence_factors": ["duration trend", "data volume correlation", "error message specifics"]
+      "incident_type": "resource-exhaustion",
+      "typical_severity": "high",
+      "symptoms": [
+        "OutOfMemoryError",
+        "gradually increasing duration",
+        "job failures"
+      ],
+      "common_causes": [
+        "data volume growth",
+        "inefficient processing algorithms",
+        "insufficient worker resources",
+        "data skew"
+      ],
+      "investigation_steps": [
+        "check job logs for error details",
+        "review data volume trends",
+        "analyze processing algorithms",
+        "check for data partitioning issues"
+      ],
+      "resolution_actions": [
+        "increase worker resources",
+        "optimize data processing logic",
+        "implement data partitioning",
+        "add checkpointing"
+      ],
+      "confidence_factors": [
+        "duration trend",
+        "data volume correlation",
+        "error message specifics"
+      ]
     },
     {
       "id": "kb-008",
       "title": "Network Connectivity Problems",
-      "symptoms": ["VPC REJECT logs", "intermittent service connectivity", "timeout errors"],
-      "common_causes": ["network ACL blocking traffic", "security group misconfiguration", "route table issues", "MTU mismatch"],
-      "investigation_steps": ["check VPC flow logs", "review network ACLs and security groups", "verify route tables", "test connectivity with network tools"],
-      "resolution_actions": ["fix network ACL rules", "correct security group configurations", "update route tables as needed", "investigate MTU/path MTU discovery issues"],
-      "confidence_factors": ["specific port/protocol affected", "correlation with network changes", "consistency of rejection patterns"]
+      "incident_type": "network",
+      "typical_severity": "high",
+      "symptoms": [
+        "VPC REJECT logs",
+        "intermittent service connectivity",
+        "timeout errors"
+      ],
+      "common_causes": [
+        "network ACL blocking traffic",
+        "security group misconfiguration",
+        "route table issues",
+        "MTU mismatch"
+      ],
+      "investigation_steps": [
+        "check VPC flow logs",
+        "review network ACLs and security groups",
+        "verify route tables",
+        "test connectivity with network tools"
+      ],
+      "resolution_actions": [
+        "fix network ACL rules",
+        "correct security group configurations",
+        "update route tables as needed",
+        "investigate MTU/path MTU discovery issues"
+      ],
+      "confidence_factors": [
+        "specific port/protocol affected",
+        "correlation with network changes",
+        "consistency of rejection patterns"
+      ]
     },
     {
       "id": "kb-009",
       "title": "SSL/TLS Certificate Expiry",
-      "symptoms": ["SSL handshake failures", "client certificate errors", "load balancer health check failures"],
-      "common_causes": ["expired certificate", "misconfigured certificate renewal", "missing certificate in load balancer"],
-      "investigation_steps": ["check certificate expiration dates", "verify ACM certificate status", "check load balancer certificate configuration", "review certificate renewal automation"],
-      "resolution_actions": ["renew or replace certificate", "verify certificate chain completeness", "update load balancer configuration", "implement expiry monitoring"],
-      "confidence_factors": ["time since expiry", "certificate validation errors", "affected services"]
+      "incident_type": "certificate",
+      "typical_severity": "critical",
+      "symptoms": [
+        "SSL handshake failures",
+        "client certificate errors",
+        "load balancer health check failures"
+      ],
+      "common_causes": [
+        "expired certificate",
+        "misconfigured certificate renewal",
+        "missing certificate in load balancer"
+      ],
+      "investigation_steps": [
+        "check certificate expiration dates",
+        "verify ACM certificate status",
+        "check load balancer certificate configuration",
+        "review certificate renewal automation"
+      ],
+      "resolution_actions": [
+        "renew or replace certificate",
+        "verify certificate chain completeness",
+        "update load balancer configuration",
+        "implement expiry monitoring"
+      ],
+      "confidence_factors": [
+        "time since expiry",
+        "certificate validation errors",
+        "affected services"
+      ]
     },
     {
       "id": "kb-010",
       "title": "Unexpected Cost Increases",
-      "symptoms": ["cost anomalies in Cost Explorer", "usage spikes without traffic increase", "budget alarms"],
-      "common_causes": ["increasing resource utilization", "inefficient code loops", "data transfer costs", "unused resources left running"],
-      "investigation_steps": ["analyze Cost Explorer by service/type", "check for unused/idle resources", "review recent deployments for inefficiencies", "analyze data transfer patterns"],
-      "resolution_actions": ["right-size over-provisioned resources", "identify and fix inefficient code", "terminate unused resources", "optimize data transfer/storage"],
-      "confidence_factors": ["cost increase percentage", "correlation with usage metrics", "services contributing to increase"]
+      "incident_type": "cost-anomaly",
+      "typical_severity": "medium",
+      "symptoms": [
+        "cost anomalies in Cost Explorer",
+        "usage spikes without traffic increase",
+        "budget alarms"
+      ],
+      "common_causes": [
+        "increasing resource utilization",
+        "inefficient code loops",
+        "data transfer costs",
+        "unused resources left running"
+      ],
+      "investigation_steps": [
+        "analyze Cost Explorer by service/type",
+        "check for unused/idle resources",
+        "review recent deployments for inefficiencies",
+        "analyze data transfer patterns"
+      ],
+      "resolution_actions": [
+        "right-size over-provisioned resources",
+        "identify and fix inefficient code",
+        "terminate unused resources",
+        "optimize data transfer/storage"
+      ],
+      "confidence_factors": [
+        "cost increase percentage",
+        "correlation with usage metrics",
+        "services contributing to increase"
+      ]
     }
   ],
   "aws_services": {
-    "compute": ["EC2", "Lambda", "ECS", "EKS", "Batch", "Lightsail"],
-    "storage": ["S3", "EBS", "EFS", "FSx", "Glacier", "Storage Gateway"],
-    "database": ["RDS", "DynamoDB", "Aurora", "Redshift", "ElastiCache", "DocumentDB"],
-    "networking": ["VPC", "CloudFront", "API Gateway", "Route 53", "ELB", "Direct Connect"],
-    "analytics": ["Athena", "EMR", "Kinesis", "QuickSight", "Glue", "DataPipeline"],
-    "management": ["CloudWatch", "CloudTrail", "Config", "Systems Manager", "Trust Advisor"],
-    "security": ["IAM", "KMS", "Secrets Manager", "GuardDuty", "Inspector", "Macie", "WAF", "Shield"]
+    "compute": [
+      "EC2",
+      "Lambda",
+      "ECS",
+      "EKS",
+      "Batch",
+      "Lightsail"
+    ],
+    "storage": [
+      "S3",
+      "EBS",
+      "EFS",
+      "FSx",
+      "Glacier",
+      "Storage Gateway"
+    ],
+    "database": [
+      "RDS",
+      "DynamoDB",
+      "Aurora",
+      "Redshift",
+      "ElastiCache",
+      "DocumentDB"
+    ],
+    "networking": [
+      "VPC",
+      "CloudFront",
+      "API Gateway",
+      "Route 53",
+      "ELB",
+      "Direct Connect"
+    ],
+    "analytics": [
+      "Athena",
+      "EMR",
+      "Kinesis",
+      "QuickSight",
+      "Glue",
+      "DataPipeline"
+    ],
+    "management": [
+      "CloudWatch",
+      "CloudTrail",
+      "Config",
+      "Systems Manager",
+      "Trust Advisor"
+    ],
+    "security": [
+      "IAM",
+      "KMS",
+      "Secrets Manager",
+      "GuardDuty",
+      "Inspector",
+      "Macie",
+      "WAF",
+      "Shield"
+    ]
   },
   "common_patterns": {
-    "performance": ["CPU utilization", "memory usage", "disk I/O", "network latency", "response time"],
-    "availability": ["error rates", "timeout rates", "health check failures", "service unavailability"],
-    "security": ["unauthorized access", "data exposure", "privilege escalation", "malware/signatures"],
-    "cost": ["resource utilization", "data transfer", "storage growth", "unused resources"]
+    "performance": [
+      "CPU utilization",
+      "memory usage",
+      "disk I/O",
+      "network latency",
+      "response time"
+    ],
+    "availability": [
+      "error rates",
+      "timeout rates",
+      "health check failures",
+      "service unavailability"
+    ],
+    "security": [
+      "unauthorized access",
+      "data exposure",
+      "privilege escalation",
+      "malware/signatures"
+    ],
+    "cost": [
+      "resource utilization",
+      "data transfer",
+      "storage growth",
+      "unused resources"
+    ]
   }
 }

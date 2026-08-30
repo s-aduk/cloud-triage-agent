@@ -21,15 +21,14 @@
     "output": {
       "incidentType": "performance",
       "severity": "high",
-      "probableCause": "sudden traffic spike",
+      "probableCause": "An EC2 instance is experiencing high CPU utilization resulting in severe application response time degradation.",
       "evidence": [
-        "KB: CPU > 90%",
-        "KB: increased response time",
-        "KB: sudden traffic spike",
-        "Incident description: EC2 instance i-0a1b2c3d4e5f6g7h8 showing 95% CPU utilization for 15 minutes. CloudWatch alarm trigge..."
+        "EC2 instance i-0a1b2c3d4e5f6g7h8 showing 95% CPU utilization for 15 minutes",
+        "Application response times increased from 200ms to 2s",
+        "Canonical categorization for this pattern: incidentType=\"performance\", typicalSeverity=\"high\""
       ],
-      "nextAction": "scale instance vertically/horizontally",
-      "confidence": 0.8
+      "nextAction": "Investigate application logs and process metrics to identify the specific process or thread consuming high CPU, and consider scaling the instance or optimizing the workload.",
+      "confidence": 0.95
     }
   },
   {
@@ -54,13 +53,14 @@
     "output": {
       "incidentType": "security",
       "severity": "critical",
-      "probableCause": "unauthorized access or data exposure",
+      "probableCause": "An S3 bucket containing sensitive customer PII has been misconfigured to allow public access.",
       "evidence": [
-        "KB entry \"S3 Public Bucket Exposure\" retrieved but symptoms don't match",
-        "Incident description: AWS Config rule flagged S3 bucket 'company-backups-2024' as publicly accessible. Bucket contains cus..."
+        "AWS Config rule flagged S3 bucket 'company-backups-2024' as publicly accessible",
+        "Bucket contains customer PII data",
+        "KB entry 1 - S3 Public Bucket Exposure"
       ],
-      "nextAction": "gather more information and monitor",
-      "confidence": 0.4
+      "nextAction": "Enable S3 Block Public Access immediately and audit the bucket and ACL policies.",
+      "confidence": 0.98
     }
   },
   {
@@ -85,13 +85,14 @@
     "output": {
       "incidentType": "resource-exhaustion",
       "severity": "high",
-      "probableCause": "resource exhaustion (connections, memory, etc.)",
+      "probableCause": "The RDS PostgreSQL instance has run out of available database connections, causing application errors and read replica lag.",
       "evidence": [
-        "KB entry \"Database Connection Exhaustion\" retrieved but symptoms don't match",
-        "Incident description: RDS PostgreSQL instance db-primary showing 98% connection usage. Application errors: 'too many conne..."
+        "RDS PostgreSQL instance db-primary showing 98% connection usage",
+        "Application errors: 'too many connections'",
+        "KB entry 1 - Database Connection Exhaustion"
       ],
-      "nextAction": "gather more information and monitor",
-      "confidence": 0.4
+      "nextAction": "Examine active database connections, check for connection leaks in the application, and consider increasing max_connections or scaling up the instance size.",
+      "confidence": 0.98
     }
   },
   {
@@ -116,15 +117,14 @@
     "output": {
       "incidentType": "throttling",
       "severity": "medium",
-      "probableCause": "traffic spike exceeding concurrency limits",
+      "probableCause": "The Lambda function process-orders is experiencing 429 errors and increased duration because it has reached its concurrent executions limit of 1000.",
       "evidence": [
-        "KB: 429 errors",
-        "KB: increased duration",
-        "KB: traffic spike exceeding concurrency limits",
-        "Incident description: Lambda function process-orders showing 429 errors. Duration increased from 1s to 8s. Concurrent exec..."
+        "Lambda function process-orders showing 429 errors",
+        "Concurrent executions at limit of 1000",
+        "KB entry 1 - Lambda Function Throttling"
       ],
-      "nextAction": "increase reserved concurrency",
-      "confidence": 0.8
+      "nextAction": "Review the function duration and concurrency limits, and consider increasing reserved concurrency or implementing buffering with SQS.",
+      "confidence": 0.95
     }
   },
   {
@@ -149,15 +149,15 @@
     "output": {
       "incidentType": "timeout",
       "severity": "high",
-      "probableCause": "backend slow performance",
+      "probableCause": "The integration Lambda function is timing out after 10 seconds, causing API Gateway to return 504 errors and severely degrading the p95 latency.",
       "evidence": [
-        "KB: 504 errors",
-        "KB: increased latency",
-        "KB: backend slow performance",
-        "Incident description: API Gateway showing 504 errors and latency p95 increased from 300ms to 12s. Integration Lambda timin..."
+        "API Gateway showing 504 errors",
+        "latency p95 increased from 300ms to 12s",
+        "Integration Lambda timing out after 10s",
+        "Canonical categorization for this pattern: incidentType=\"timeout\", typicalSeverity=\"high\""
       ],
-      "nextAction": "increase timeout settings",
-      "confidence": 0.8
+      "nextAction": "Investigate the integration Lambda function logs to identify the cause of slow execution or database bottlenecks, and consider optimizing the code or adjusting timeout limits.",
+      "confidence": 0.98
     }
   },
   {
@@ -180,15 +180,17 @@
       }
     },
     "output": {
-      "incidentType": "performance",
-      "severity": "high",
-      "probableCause": "high CPU utilization or resource contention",
+      "incidentType": "deployment-issue",
+      "severity": "medium",
+      "probableCause": "A recent deployment to the ECS web-frontend service introduced a bug or resource leak that increased the error rate to 5% and elevated memory usage.",
       "evidence": [
-        "KB entry \"Deployment-Related Issues\" retrieved but symptoms don't match",
-        "Incident description: Deploy finished 10 minutes ago to ECS service web-frontend. Error rate increased from 0.1% to 5%. CP..."
+        "Deploy finished 10 minutes ago to ECS service web-frontend",
+        "Error rate increased from 0.1% to 5%",
+        "Memory usage increased from 60% to 85%",
+        "KB entry 1 - Deployment-Related Issues matches symptoms of increased error rate post-deploy and resource usage changes"
       ],
-      "nextAction": "gather more information and monitor",
-      "confidence": 0.4
+      "nextAction": "Investigate the recent deployment changes for potential memory leaks or bugs, and prepare to roll back the deployment if error rates do not stabilize.",
+      "confidence": 0.95
     }
   },
   {
@@ -211,17 +213,16 @@
       }
     },
     "output": {
-      "incidentType": "data-pipeline",
+      "incidentType": "resource-exhaustion",
       "severity": "high",
-      "probableCause": "data volume growth",
+      "probableCause": "The nightly ETL Glue job failed due to an OutOfMemoryError while processing an increasing volume of S3 data.",
       "evidence": [
-        "KB: OutOfMemoryError",
-        "KB: gradually increasing duration",
-        "KB: data volume growth",
-        "Incident description: Glue job etl-nightly failed with OutOfMemoryError. Processing 2TB of S3 data. Job history shows grad..."
+        "Glue job etl-nightly failed with OutOfMemoryError",
+        "Processing 2TB of S3 data",
+        "Job history shows gradually increasing duration over past 3 days"
       ],
-      "nextAction": "increase worker resources",
-      "confidence": 0.8
+      "nextAction": "Increase worker resources or optimize data processing logic and partitioning for the ETL job.",
+      "confidence": 0.95
     }
   },
   {
@@ -246,13 +247,14 @@
     "output": {
       "incidentType": "network",
       "severity": "high",
-      "probableCause": "network connectivity issues",
+      "probableCause": "Intermittent connectivity loss between app-subnet and db-subnet due to VPC flow REJECT logs on port 5432.",
       "evidence": [
-        "KB entry \"Network Connectivity Problems\" retrieved but symptoms don't match",
-        "Incident description: VPC flow shows REJECT traffic from app-subnet to db-subnet on port 5432. Security group unchanged. A..."
+        "VPC flow shows REJECT traffic from app-subnet to db-subnet on port 5432",
+        "Applications losing DB connectivity intermittently",
+        "VPC REJECT logs; intermittent service connectivity; timeout errors"
       ],
-      "nextAction": "gather more information and monitor",
-      "confidence": 0.4
+      "nextAction": "Investigate network ACL rules, security group configurations, and route tables between the app and database subnets.",
+      "confidence": 0.95
     }
   },
   {
@@ -277,15 +279,14 @@
     "output": {
       "incidentType": "certificate",
       "severity": "critical",
-      "probableCause": "expired certificate",
+      "probableCause": "The SSL certificate for api.example.com expired and was not rotated via ACM, causing complete TLS handshake failures for clients.",
       "evidence": [
-        "KB: SSL handshake failures",
-        "KB: client certificate errors",
-        "KB: expired certificate",
-        "Incident description: Load balancer SSL certificate for api.example.com expired 2 hours ago. Clients getting SSL handshake..."
+        "Load balancer SSL certificate for api.example.com expired 2 hours ago",
+        "Clients getting SSL handshake failures",
+        "Certificate not rotated via ACM"
       ],
-      "nextAction": "renew or replace certificate",
-      "confidence": 0.8
+      "nextAction": "Immediately renew or replace the expired SSL certificate on the load balancer and update ACM configuration to ensure automated future renewals.",
+      "confidence": 1
     }
   },
   {
@@ -308,15 +309,16 @@
       }
     },
     "output": {
-      "incidentType": "throttling",
+      "incidentType": "cost-anomaly",
       "severity": "medium",
-      "probableCause": "service throttling or rate limiting",
+      "probableCause": "AWS Cost Explorer shows Lambda costs increased 300% day-over-day due to longer execution durations with the same invocation count.",
       "evidence": [
-        "KB entry \"Unexpected Cost Increases\" retrieved but symptoms don't match",
-        "Incident description: AWS Cost Explorer shows Lambda costs increased 300% day-over-day. No traffic increase observed. Same..."
+        "AWS Cost Explorer shows Lambda costs increased 300% day-over-day",
+        "No traffic increase observed",
+        "Same number of invocations but longer duration"
       ],
-      "nextAction": "gather more information and monitor",
-      "confidence": 0.4
+      "nextAction": "Inspect Lambda CloudWatch logs and X-Ray traces to identify the root cause of the increased function execution duration and optimize the inefficient code.",
+      "confidence": 0.95
     }
   }
 ]

@@ -12,17 +12,26 @@ Parameters:
       - staging
       - prod
     Description: Deployment environment
-  BedrockModelId:
+  GeminiApiKey:
     Type: String
-    Default: us.anthropic.claude-haiku-4-5-20251001-v1:0
+    NoEcho: true
     Description: >
-      Bedrock inference profile ID for the Claude model used by both
-      workflows. Must be an inference profile ID (region-prefixed), not a
-      bare model ID — on-demand invocation of a bare model ID is rejected
-      for current-generation Claude models. Verify the current value for
-      your account/region with `aws bedrock list-inference-profiles`, and
-      make sure model access is enabled in the Bedrock console
-      (Model access -> Anthropic) before deploying.
+      Google Gemini API key (free tier, no credit card — get one at
+      https://aistudio.google.com/apikey). Used by both workflows instead
+      of Bedrock; see docs/changelog.md for why this project moved off
+      Bedrock (account-level AWS restrictions blocked model access/quota
+      for a free-tier account). Passed as a SecureString via NoEcho so it
+      doesn't appear in the CloudFormation console/CLI output — for a real
+      production deployment, prefer Secrets Manager or SSM Parameter Store
+      over a plain parameter.
+  GeminiModel:
+    Type: String
+    Default: gemini-2.5-flash-lite
+    Description: >
+      Gemini model ID used by both workflows. Deliberately Flash-Lite, not
+      Flash — Flash's free-tier daily quota was cut sharply in December
+      2025 (this project hit a 20-requests/day cap on one account); see
+      docs/changelog.md for the full story.
 
 # Global settings for all functions
 Globals:
@@ -36,26 +45,18 @@ Globals:
         LOG_LEVEL: info
         POWERTOOLS_SERVICE_NAME: cloud-triage-agent
         POWERTOOLS_METRICS_NAMESPACE: CloudTriageAgent
-        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        GEMINI_API_KEY: !Ref GeminiApiKey
+        GEMINI_MODEL: !Ref GeminiModel
 
 Resources:
-  # Baseline workflow: single Bedrock call, no retrieval, no verification.
+  # Baseline workflow: single Gemini call, no retrieval, no verification.
   BaselineFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub cloud-triage-agent-baseline-${Environment}
-      Description: Baseline workflow - single-prompt incident triage via Bedrock
+      Description: Baseline workflow - single-prompt incident triage via Gemini
       CodeUri: services/triage-api/
       Handler: src/handlers/baseline.BaselineHandler
-      Policies:
-        - Statement:
-            - Sid: InvokeBedrockModel
-              Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource:
-                - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/*
-                - !Sub arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*
       Events:
         BaselineApi:
           Type: Api
@@ -73,23 +74,14 @@ Resources:
           - src/handlers/baseline.ts
 
   # Agent workflow: classify -> retrieve (local KB similarity) -> verify
-  # (Bedrock, can override the initial classification) -> summarize.
+  # (Gemini, can override the initial classification) -> summarize.
   AgentFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub cloud-triage-agent-agent-${Environment}
-      Description: Agent workflow - classify/retrieve/verify incident triage via Bedrock
+      Description: Agent workflow - classify/retrieve/verify incident triage via Gemini
       CodeUri: services/triage-api/
       Handler: src/handlers/agent.AgentHandler
-      Policies:
-        - Statement:
-            - Sid: InvokeBedrockModel
-              Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource:
-                - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/*
-                - !Sub arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*
       Events:
         AgentApi:
           Type: Api

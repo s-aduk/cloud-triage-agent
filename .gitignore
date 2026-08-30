@@ -1,10 +1,8 @@
 node_modules/
 dist/
 .aws-sam/
-.venv/
 samconfig.toml
 *.log
 .env.local
-
-# NOTE: output/*.json is intentionally NOT ignored — those files are the
-# evidence backing docs/changelog.md and should be committed.
+.claude/
+.next/

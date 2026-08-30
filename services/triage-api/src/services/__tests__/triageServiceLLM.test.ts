@@ -1,7 +1,7 @@
 import { agentTriageLLM, baselineTriageLLM, agentTriageLLMWithTrajectory } from '../triageServiceLLM';
-import { invokeStructured } from '../bedrockClient';
+import { invokeStructured } from '../geminiClient';
 
-jest.mock('../bedrockClient', () => ({
+jest.mock('../geminiClient', () => ({
   invokeStructured: jest.fn(),
 }));
 

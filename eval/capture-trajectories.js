@@ -1,5 +1,5 @@
 /**
- * Captures representative agent trajectories against real Bedrock calls and
+ * Captures representative agent trajectories against real Gemini calls and
  * writes them as readable Markdown files under docs/trajectories/.
  *
  * This is the hackathon's "Agent trajectories" deliverable: representative
@@ -7,10 +7,11 @@
  * including the classify/retrieve/verify steps and (where it happens) the
  * verify step overriding an earlier guess.
  *
- * Requires the same Bedrock setup as eval:llm (AWS credentials, model
- * access enabled). Runs a small, deliberately-chosen subset of cases rather
- * than all 10, since a handful of representative trajectories is the ask —
- * not a full trajectory per eval case.
+ * Requires the same Gemini setup as eval:llm (GEMINI_API_KEY — free, no
+ * credit card, get one at https://aistudio.google.com/apikey). Runs a
+ * small, deliberately-chosen subset of cases rather than all 10, since a
+ * handful of representative trajectories is the ask — not a full
+ * trajectory per eval case.
  *
  * Usage:
  *   npm run trajectories

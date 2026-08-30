@@ -19,6 +19,20 @@ export interface TriageOutput {
 export interface KnowledgeBaseEntry {
   id: string;
   title: string;
+  // Canonical categorization for this failure pattern — added after the
+  // eval:llm run showed the agent's verify step reasoning "blind" on the
+  // exact two fields (incidentType, severity) it's graded on: retrieved
+  // entries had no signal for either, so verification was just a second
+  // guess with more text to reason over, not a real grounding advantage
+  // over the baseline's single call. These are a genuine domain judgment
+  // about the typical case for each pattern (same taxonomy as
+  // triageServiceLLM.ts's INCIDENT_TYPES/SEVERITIES), not derived from any
+  // specific eval case — treat as a strong prior, not a hardcoded answer:
+  // a specific incident can still deviate from the typical severity for
+  // its pattern, which is why the verify prompt is told to weigh it
+  // alongside the description rather than copy it uncritically.
+  incident_type?: string;
+  typical_severity?: string;
   symptoms: string[];
   common_causes: string[];
   investigation_steps: string[];
