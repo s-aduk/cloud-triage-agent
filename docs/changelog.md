@@ -831,3 +831,67 @@ bad luck — and it can hide more than one bug at once, as it did here:
 fixing the reported error revealed a second, unrelated one directly
 behind it. `sam validate` and a real `sam build` belong somewhere in this
 project's own pre-handoff checklist, not just `tsc`/`jest`/`eval:local`.
+
+## Fix: browser CORS block on real requests, even though `template.yaml` has a `Cors` block
+
+Reported from the frontend, after both a local build and an AWS deploy
+succeeded cleanly: clicking "Analyze Incident" failed with `TypeError:
+Failed to fetch`, and the browser console showed the specific reason —
+`Access to fetch at '.../prod/baseline' from origin 'http://localhost:3000'
+has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is
+present on the requested resource.`
+
+**Why `template.yaml` having `Cors: { AllowOrigin: "'*'", ... }` didn't
+prevent this:** `AWS::Serverless::Api`'s `Cors` property auto-generates the
+API Gateway resources needed to answer the browser's **preflight** OPTIONS
+request — that part was already working. It does **not** add CORS headers
+to what a Lambda proxy integration actually returns for the real GET/POST
+that follows. That's the handler's own responsibility, and neither
+`BaselineHandler` nor `AgentHandler` was setting `headers` on any of their
+return paths (200, 400, or 502) — so the browser received a real,
+successful response from a real, reachable, correctly-CORS-configured API
+Gateway, and still blocked it client-side because that specific response
+had no `Access-Control-Allow-Origin` header on it. This is a genuine gap
+in the deployed code, not anything specific to the reporter's setup —
+every deployment of this project up to this point would have hit it the
+first time someone used the frontend against the real API rather than a
+mocked/local client.
+
+**Fix:** added `services/triage-api/src/handlers/httpResponse.ts`, a
+`jsonResponse(statusCode, body)` helper that sets
+`Access-Control-Allow-Origin`/`-Headers`/`-Methods` (matching
+`template.yaml`'s `Cors` values) plus `Content-Type` on every response.
+Routed every return path in `BaselineHandler`, `AgentHandler`,
+`BaselineHandlerRuleBased`, and `AgentHandlerRuleBased` through it — not
+just the 200 case, since an error response missing the header would fail
+the exact same way in the browser and be far more confusing to debug
+mid-incident (or mid-demo-recording) than a clean CORS block on a working
+request.
+
+**Verified:** `tsc` builds clean, all 4 unit tests pass (they exercise
+`triageServiceLLM.ts` directly, not the handlers, so no coupling to the
+response shape); a real `sam build` still succeeds; grepped the built
+`BaselineFunction` bundle directly for `Access-Control-Allow-Origin` and
+confirmed it's present in the deployed artifact, not just the source.
+Could not verify against a live invocation in this environment (no Docker
+for `sam local invoke`, no AWS credentials for a real deploy) — **this
+requires an actual `sam build && sam deploy` to take effect**; redeploying
+is not optional here, a rebuild alone won't reach the currently-running
+Lambda.
+
+**Hot take:** this is the same root lesson as the two `sam build` bugs
+before it, one layer further down the stack — "the template says CORS is
+configured" and "every response actually carries CORS headers" are
+different claims, and the gap between them was invisible to every check
+this project ran short of clicking the actual button in an actual browser
+against an actual deployment. Three bugs in a row now have shared the same
+shape: a real end-to-end path (a live `sam build`, then a live browser
+request against a live deploy) surfaced something that `tsc`, unit tests
+with a mocked client, and rule-based/LLM eval scripts running from a full
+local repo tree structurally could not have caught, because none of them
+exercise the actual deploy artifact or the actual HTTP contract it serves.
+Worth stating plainly for the reproducibility criterion this project is
+graded on: a project that passes all its own checks can still be broken
+in a way only a genuine clean-environment run would reveal — which is
+exactly why that run is worth doing before a demo, not just before a
+submission deadline.

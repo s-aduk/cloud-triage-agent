@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { agentTriageRuleBased, TriageInput } from '../services/triageService';
 import { agentTriageLLM } from '../services/triageServiceLLM';
+import { jsonResponse } from './httpResponse';
 
 /**
  * Agent workflow: classify -> retrieve context -> verify -> summarize,
@@ -11,36 +12,24 @@ import { agentTriageLLM } from '../services/triageServiceLLM';
 export const AgentHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     if (!event.body) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Missing request body' }),
-      };
+      return jsonResponse(400, { error: 'Missing request body' });
     }
 
     const input: TriageInput = JSON.parse(event.body);
 
     if (!input.description) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Missing description field' }),
-      };
+      return jsonResponse(400, { error: 'Missing description field' });
     }
 
     const output = await agentTriageLLM(input);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(output),
-    };
+    return jsonResponse(200, output);
   } catch (error) {
     console.error('Agent handler error:', error);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({
-        error: 'Triage model call failed',
-        detail: error instanceof Error ? error.message : String(error),
-      }),
-    };
+    return jsonResponse(502, {
+      error: 'Triage model call failed',
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 
@@ -51,5 +40,5 @@ export const AgentHandler = async (event: APIGatewayProxyEvent): Promise<APIGate
 export const AgentHandlerRuleBased = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const input: TriageInput = JSON.parse(event.body || '{}');
   const output = await agentTriageRuleBased(input);
-  return { statusCode: 200, body: JSON.stringify(output) };
+  return jsonResponse(200, output);
 };

@@ -281,11 +281,11 @@ You should see:
 
    - Root cause, if you've moved or re-added a data file: SAM's build only copies each function's `CodeUri` (`services/triage-api/`) into its scratch build directory — nothing outside it exists for esbuild to bundle. `knowledge-base.json` deliberately lives at `services/triage-api/data/knowledge-base.json`, inside `CodeUri`, for exactly this reason (see `docs/changelog.md`). If this error reappears, something has re-imported a file from outside `CodeUri` — check what `triageService.ts` (or any new code) is importing and make sure any file it needs at runtime is physically inside `services/triage-api/`, not the repo-root `data/` directory (which is fine for `evaluation-cases.json`, since only local eval scripts read that one, not deployed Lambda code).
 
-2. **Frontend cannot connect to API**
-   
+2. **Frontend cannot connect to API — browser console shows "has been blocked by CORS policy" / "No 'Access-Control-Allow-Origin' header is present"**
+
+   - This was a real bug (fixed as of this doc revision, see `docs/changelog.md`): `template.yaml`'s `AWS::Serverless::Api` `Cors` property only auto-configures the **preflight OPTIONS** response — it does not add CORS headers to what a Lambda proxy integration actually returns for the real POST. Both `BaselineHandler` and `AgentHandler` now route every response (success and error alike) through a shared `jsonResponse()` helper (`services/triage-api/src/handlers/httpResponse.ts`) that sets `Access-Control-Allow-Origin` explicitly. If you still see this error: (a) confirm you've redeployed since this fix (`sam build && sam deploy`) — a stale Lambda from before the fix will still be missing the header even with an up-to-date `template.yaml`; (b) double check `NEXT_PUBLIC_API_URL` matches your actual deployed API Gateway URL, since a request to a completely wrong/nonexistent origin can also surface as a CORS-flavored browser error.
    - Verify the `NEXT_PUBLIC_API_URL` in `.env.local` matches the deployed API URL
    - Check that the API Gateway is deployed and accessible
-   - Ensure CORS settings allow requests from your frontend origin
 
 3. **Evaluation scripts fail**
    
